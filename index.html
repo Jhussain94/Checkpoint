@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CHECKPOINT — A digital archive by Camberwell students</title>
+  <meta name="description" content="Explore memories, music, unfinished thoughts, and creative fragments left by Camberwell students."/>
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN 1 — ARRIVAL (loading + start merged into one screen)
+     The illustration is shown immediately.
+     A loading bar overlay fades out after ~2.5 s.
+     Only then does the START button become active — no auto-advance.
+────────────────────────────────────────────────────────────────── -->
+<div class="screen active" id="screen-arrival">
+
+  <!-- Image wrapper — JS sizes & centres the image precisely -->
+  <div id="arrival-img-wrap">
+    <img id="arrival-scene"
+         src="img/Loading%20Screen%20Finish.png"
+         alt="Checkpoint campus"
+         onload="onSceneLoaded()"/>
+
+    <!-- Invisible hotspot: disabled until loading finishes, then JS enables it -->
+    <button id="start-btn"
+            aria-label="Enter the world"
+            disabled
+            onclick="transitionTo('world')">
+    </button>
+
+    <!-- Boy walk — wrapper clips; each img shifted so character stays centred -->
+    <div id="boy-wrap" aria-hidden="true">
+      <img class="boy-frame" id="boy-f1" src="img/Boy%20Walking%201.png"/>
+      <img class="boy-frame" id="boy-f2" src="img/Boy%20Walking%202.png"/>
+      <img class="boy-frame" id="boy-f3" src="img/Boy%20Walking%203.png"/>
+    </div>
+
+    <!-- Wind particles: leaves + petals blown across the scene -->
+    <div id="wind-particles"></div>
+
+    <div id="sparkle-container"></div>
+  </div>
+
+  <!-- Loading bar sits on top; fades out when ready -->
+  <div id="loading-overlay">
+    <div class="loading-track">
+      <div class="loading-fill" id="loading-fill"></div>
+    </div>
+    <p class="loading-text" id="loading-text">Waking up the campus...</p>
+  </div>
+
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN 3 — WORLD MAP
+     SVG campus map with 5 zones and glowing checkpoint dots.
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-world">
+
+  <!-- Game canvas — fills the full screen -->
+  <canvas id="game-canvas"></canvas>
+
+  <!-- HTML overlay: title + drop button sit above the canvas -->
+  <div id="world-overlay">
+    <div id="world-title-block">
+      <div class="world-title">CHECKPOINT</div>
+      <div class="world-subtitle">A digital archive by Camberwell students</div>
+    </div>
+    <button id="add-drop-fab" onclick="openLeaveForm()">+ Leave a drop</button>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — GENERIC ZONE (garden / workshop / forest / corner)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-zone" role="region" aria-label="Zone drops">
+  <div class="zone-panel-top">
+    <div>
+      <div class="zone-panel-heading" id="zone-panel-title"></div>
+      <div class="zone-panel-desc"    id="zone-panel-desc"></div>
+    </div>
+    <button class="panel-close-btn" onclick="closeZonePanel()" aria-label="Close">✕</button>
+  </div>
+  <div class="zone-cards-grid" id="zone-cards-grid"></div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     MODAL — DROP DETAIL
+     Slides up when a checkpoint dot is clicked.
+────────────────────────────────────────────────────────────────── -->
+<div id="modal-drop" role="dialog" aria-modal="true" aria-label="Drop detail">
+  <div class="drop-panel">
+    <div class="drag-handle"></div>
+
+    <div class="drop-row-top">
+      <span class="drop-found-label" id="drop-found-label">📍 Drop Found</span>
+      <button class="drop-close" onclick="closeDrop()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="drop-content" id="drop-content-inner">
+      <!-- rendered by JS -->
+    </div>
+
+    <p class="drop-caption" id="drop-caption"></p>
+
+    <div class="drop-footer">
+      <span class="mood-tag" id="drop-mood">peaceful</span>
+      <span class="sep">·</span>
+      <span class="drop-username" id="drop-username">anonymous student</span>
+      <span class="sep">·</span>
+      <span class="drop-timestamp" id="drop-timestamp"></span>
+    </div>
+
+    <button class="leave-drop-cta" onclick="openLeaveForm()">
+      ✏️ Leave your own drop
+    </button>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     MODAL — LEAVE A DROP
+     Form to contribute a new drop to the archive.
+────────────────────────────────────────────────────────────────── -->
+<div id="modal-leave" role="dialog" aria-modal="true" aria-label="Leave a drop">
+  <div class="leave-panel">
+    <div class="drag-handle"></div>
+
+    <div class="leave-header">
+      <div class="leave-title"><span>✏️</span> Leave a drop</div>
+      <button class="drop-close" onclick="closeLeaveForm()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Form -->
+    <div id="leave-form-wrap">
+
+      <div class="form-group">
+        <label class="form-label" for="drop-url">Spotify / YouTube link <span style="opacity:.5;font-weight:400">(optional)</span></label>
+        <input class="form-input" id="drop-url" type="url"
+               placeholder="https://open.spotify.com/track/…"/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="drop-message">Write something <span style="opacity:.5;font-weight:400">(optional if link provided)</span></label>
+        <textarea class="form-textarea" id="drop-message" maxlength="200"
+                  placeholder="A song that got you through deadline week. A memory. A thought you never said out loud…"></textarea>
+        <div class="char-count" id="char-count">0 / 200</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Where does this belong?</label>
+        <div class="chip-row" id="area-chips">
+          <!-- built by JS -->
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Mood</label>
+        <div class="chip-row" id="mood-chips">
+          <!-- built by JS -->
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="anon-row">
+          <input type="checkbox" id="anon-check" checked/>
+          <label for="anon-check">Stay anonymous</label>
+        </div>
+        <div id="name-field-wrap" style="display:none; margin-top:8px">
+          <input class="form-input" id="drop-name" type="text"
+                 placeholder="Your name or a nickname"/>
+        </div>
+      </div>
+
+      <button class="submit-btn" onclick="submitDrop()">Drop it into the world →</button>
+    </div>
+
+    <!-- Success state -->
+    <div id="leave-success">
+      <div class="success-icon">✨</div>
+      <div class="success-title">Drop left behind.</div>
+      <p class="success-text">
+        Your fragment is now part of the world.<br/>
+        Someone will find it — maybe today, maybe years from now.
+      </p>
+      <button class="success-back" onclick="closeLeaveForm()">Back to the map</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — MEDIA MEADOW (full zone detail)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-meadow" role="region" aria-label="Media Meadow">
+  <div class="meadow-top">
+    <div>
+      <div class="meadow-heading">🎵 Media Meadow</div>
+      <div class="meadow-desc">Songs, playlists, and videos left by students who needed music most.</div>
+    </div>
+    <button class="panel-close-btn" onclick="closeMeadow()" aria-label="Close Media Meadow">✕</button>
+  </div>
+  <div class="music-grid" id="meadow-grid">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+
+<!-- Toast notification -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+
+<!-- Ambient audio — loading screen bell -->
+<audio id="ambient-audio" loop preload="auto">
+  <source src="Sound/First Bell Summer.mp3" type="audio/mpeg"/>
+</audio>
+
+<!-- ── Scripts ──────────────────────────────────────────────── -->
+<script src="js/game.js"></script>
+<script src="js/drops.js"></script>
+<script src="js/app.js"></script>
+<script>
+  // Update drop count badge once data is ready
+  document.addEventListener('DOMContentLoaded', () => {
+    const badge = document.getElementById('drop-count');
+    if (badge) badge.textContent = getDrops().length + ' drops in the world';
+  });
+</script>
+
+</body>
+</html>
