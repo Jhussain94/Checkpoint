@@ -211,8 +211,13 @@ function toggleMapAudio() {
   const audio = document.getElementById('ambient-audio');
   const btn   = document.getElementById('vol-toggle');
   if (!audio) return;
-  audioMuted   = !audioMuted;
-  audio.muted  = audioMuted;
+  audioMuted = !audioMuted;
+  if (audioMuted) {
+    audio.pause();
+  } else {
+    audio.volume = 0.20;
+    audio.play().catch(() => {});
+  }
   if (btn) btn.textContent = audioMuted ? '🔇' : '🔊';
 }
 

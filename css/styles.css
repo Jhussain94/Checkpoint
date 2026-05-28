@@ -737,29 +737,70 @@ html, body {
 
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
-  /* ── Layout wrappers — tighter inset on phone ── */
-  #arrival-img-wrap,
-  #world-img-wrap {
-    inset: 8px;
-    border-radius: 14px;
+
+  /* ── Arrival screen — tighter inset ── */
+  #arrival-img-wrap {
+    inset: 6px;
+    border-radius: 12px;
   }
 
-  /* ── World overlay ── */
-  #world-overlay { padding: 10px 12px; }
-  #world-title-block { padding: 6px 12px; }
-  .world-title { font-size: 1rem; }
-  .world-subtitle { font-size: 0.65rem; }
-  #vol-toggle { width: 36px; height: 36px; font-size: 1.1rem; }
+  /* ── World screen — scrolls vertically so the full landscape map fits ── */
+  #screen-world {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  /* Map container switches from fixed-inset box to natural-height block.
+     This makes zone button % positions match the image correctly on mobile. */
+  #world-img-wrap {
+    position: relative !important;
+    inset: auto !important;
+    width: calc(100% - 12px);
+    margin: 52px auto 0;   /* top margin leaves room for the fixed overlay */
+    height: auto !important;
+    border-radius: 12px;
+    display: block;
+    overflow: visible;
+    box-shadow: 0 6px 28px rgba(42,26,4,0.22);
+  }
+
+  #map-bg {
+    width: 100%;
+    height: auto;
+    max-height: none;
+    display: block;
+    border-radius: 12px;
+  }
+
+  /* Overlay stays pinned at top while map scrolls beneath it */
+  #world-overlay {
+    position: fixed !important;
+    top: 0; left: 0; right: 0; bottom: auto;
+    padding: 8px 10px;
+    background: rgba(249,247,208,0.94);
+    backdrop-filter: blur(6px);
+    z-index: 20;
+  }
+
+  #world-title-block {
+    background: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    padding: 3px 8px;
+  }
+  .world-title    { font-size: 0.95rem; }
+  .world-subtitle { font-size: 0.6rem; }
+  #vol-toggle     { width: 34px; height: 34px; font-size: 1rem; }
 
   /* ── Zone hotspot buttons — bigger tap targets, labels always visible ── */
-  .mzb-dot { width: 24px; height: 24px; }
+  .mzb-dot { width: 22px; height: 22px; }
   .mzb-label {
     opacity: 1 !important;
     transform: translateY(0) !important;
-    font-size: 0.65rem;
-    padding: 2px 6px;
+    font-size: 0.6rem;
+    padding: 2px 5px;
   }
-  .map-zone-btn { padding: 8px; }
+  .map-zone-btn { padding: 6px; }
 
   /* ── Drop & leave panels ── */
   .drop-panel, .leave-panel {
@@ -768,52 +809,38 @@ html, body {
   }
 
   /* ── Meadow panel ── */
-  #panel-meadow { padding: 20px 14px 48px; }
-  .music-grid { grid-template-columns: 1fr; }
-  .meadow-heading { font-size: 1.5rem; }
+  #panel-meadow    { padding: 20px 14px 48px; }
+  .music-grid      { grid-template-columns: 1fr; }
+  .meadow-heading  { font-size: 1.5rem; }
 
   /* ── Zone panel ── */
-  #panel-zone { padding: 24px 16px 48px; }
-  .zone-cards-grid { grid-template-columns: 1fr; }
-  .zone-panel-heading { font-size: 1.5rem; }
+  #panel-zone          { padding: 24px 16px 48px; }
+  .zone-cards-grid     { grid-template-columns: 1fr; }
+  .zone-panel-heading  { font-size: 1.5rem; }
 
-  /* ── Notice board — full-width, smaller notes ── */
-  .noticeboard-inner {
-    padding: 16px 14px 24px;
-    max-height: 90vh;
-  }
-  .noticeboard-pins { gap: 10px; justify-content: center; }
-  .sticky-note { width: 140px; min-height: 120px; font-size: 0.76rem; padding: 12px 10px 8px; }
+  /* ── Notice board ── */
+  .noticeboard-inner   { padding: 16px 14px 24px; max-height: 90vh; }
+  .noticeboard-pins    { gap: 10px; justify-content: center; }
+  .sticky-note         { width: 140px; min-height: 120px; font-size: 0.76rem; padding: 12px 10px 8px; }
 
   /* ── Camera compass ── */
-  .camera-panel-inner {
-    padding: 16px 14px 24px;
-    max-height: 90vh;
-  }
-  .camera-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
-  .camera-submit-row { flex-direction: column; }
-  .camera-submit-btn { width: 100%; }
+  .camera-panel-inner  { padding: 16px 14px 24px; max-height: 90vh; }
+  .camera-grid         { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+  .camera-submit-row   { flex-direction: column; }
+  .camera-submit-btn   { width: 100%; }
 
-  /* ── Canvas room — full height on mobile ── */
-  .canvas-panel-inner {
-    width: 100%;
-    height: 100%;
-    border-radius: 0;
-  }
-  #panel-canvas { align-items: stretch; }
-  .canvas-toolbar { gap: 4px; padding: 6px 10px; }
-  .tool-btn { width: 30px; height: 30px; font-size: 0.9rem; }
+  /* ── Canvas room — full screen on mobile ── */
+  .canvas-panel-inner  { width: 100%; height: 100%; border-radius: 0; }
+  #panel-canvas        { align-items: stretch; }
+  .canvas-toolbar      { gap: 4px; padding: 6px 10px; }
+  .tool-btn            { width: 30px; height: 30px; font-size: 0.9rem; }
 
   /* ── Library timer ── */
-  .library-panel-inner {
-    padding: 22px 20px 28px;
-  }
-  .timer-display { font-size: 3rem; }
+  .library-panel-inner { padding: 22px 20px 28px; }
+  .timer-display       { font-size: 3rem; }
 
-  /* ── Chip rows ── */
+  /* ── Chips — scroll horizontally so all options fit ── */
   .chip { font-size: 0.75rem; padding: 4px 11px; }
-
-  /* ── Mood chip row — scroll horizontally ── */
   .chip-row { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 4px; }
   .chip-row::-webkit-scrollbar { height: 3px; }
   .chip-row::-webkit-scrollbar-thumb { background: rgba(139,96,20,0.3); border-radius: 2px; }
