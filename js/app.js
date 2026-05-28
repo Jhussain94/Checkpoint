@@ -23,7 +23,8 @@ const MOOD_ICONS = {
 const AREA_ICONS = { meadow:'🎵', garden:'🌸', workshop:'✏️', forest:'🌲', corner:'📍' };
 
 // ── BOOT ──────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+  await initDB();          // load drops from Supabase (or seed data)
   showScreen('arrival');
   buildMeadowCards();
   buildLeaveForm();
@@ -31,6 +32,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const img = document.getElementById('arrival-scene');
   if (img && img.complete) onSceneLoaded();
 });
+
+// Called by drops.js real-time subscription when a new drop arrives
+function onNewDropArrived(drop) {
+  buildMeadowCards();
+  buildNoticeBoardPins();
+  showToast('✨ A new drop just appeared in the world!');
+}
+
+// Stub — checkpoint dots not rendered on the PNG map
+function renderCheckpoints() {}
 
 // ── SCREEN MANAGEMENT ─────────────────────────────────────────
 function showScreen(id) {
@@ -43,8 +54,9 @@ function showScreen(id) {
 
 function transitionTo(id) {
   if (id === 'world') {
+    fadeOutLoadingAudio();   // fade the loading screen music
     stopLoadingAnimations();
-    startAmbientAudio(); // called directly from click handler — always allowed by browsers
+    startAmbientAudio();     // start map ambient — direct click handler, always allowed
   }
   const from = document.getElementById('screen-' + currentScreen);
   if (from) {
@@ -64,9 +76,8 @@ function onSceneLoaded() {
   loadingStarted = true;
 
   positionStartButton();
-  startLoadingAnimations();  // boy walk + wind particles begin immediately
-  // Audio is NOT attempted here — browsers block autoplay before a user gesture.
-  // It is started directly inside transitionTo() which runs from the START button click.
+  startLoadingAnimations();
+  startLoadingAudio();       // tropical house loop — plays on loading screen
 
   const fill    = document.getElementById('loading-fill');
   const text    = document.getElementById('loading-text');
@@ -158,6 +169,38 @@ function startFallingLeaves() {
   });
 }
 
+// ── LOADING SCREEN AUDIO ──────────────────────────────────────
+function startLoadingAudio() {
+  const la = document.getElementById('loading-audio');
+  if (!la) return;
+  la.volume = 0.55;
+  la.play().catch(() => {
+    // Autoplay blocked — unlock on first gesture (before or same as START click)
+    function unlockLoading() {
+      la.play().catch(() => {});
+      document.removeEventListener('pointerdown', unlockLoading);
+      document.removeEventListener('keydown',     unlockLoading);
+    }
+    document.addEventListener('pointerdown', unlockLoading, { once: true });
+    document.addEventListener('keydown',     unlockLoading, { once: true });
+  });
+}
+
+function fadeOutLoadingAudio() {
+  const la = document.getElementById('loading-audio');
+  if (!la || la.paused) return;
+  const tick = () => {
+    if (la.volume > 0.04) {
+      la.volume = Math.max(0, la.volume - 0.05);
+      setTimeout(tick, 40);
+    } else {
+      la.pause();
+      la.currentTime = 0;
+    }
+  };
+  tick();
+}
+
 // ── AMBIENT AUDIO ─────────────────────────────────────────────
 // startAmbientAudio() must be called directly from a user-gesture handler
 // (e.g. a click callback) so every browser permits audio.play().
@@ -166,7 +209,7 @@ let audioStarted = false;
 function startAmbientAudio() {
   const audio = document.getElementById('ambient-audio');
   if (!audio || audioStarted) return;
-  audio.volume = 0.12;
+  audio.volume = 0.45;
   const p = audio.play();
   if (p !== undefined) {
     p.then(() => {
@@ -333,10 +376,10 @@ function closeDrop() {
 
 function renderDropContent(drop) {
   if (drop.type === 'song' || drop.type === 'playlist') {
-    return `<iframe src="${drop.content}" height="152" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius:12px"></iframe>`;
+    return `<iframe src="${drop.content}" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius:12px;display:block"></iframe>`;
   }
   if (drop.type === 'video') {
-    return `<iframe src="${drop.content}" height="200" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" style="border-radius:12px"></iframe>`;
+    return `<iframe src="${drop.content}" width="100%" height="220" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" style="border-radius:12px;display:block"></iframe>`;
   }
   if (drop.type === 'photo') {
     return `<img src="${drop.content}" alt="" loading="lazy"/>`;
@@ -438,7 +481,7 @@ function closeLeaveForm() {
   leaveOpen = false;
 }
 
-function submitDrop() {
+async function submitDrop() {
   const url  = document.getElementById('drop-url').value.trim();
   const msg  = document.getElementById('drop-message').value.trim();
   const anon = document.getElementById('anon-check').checked;
@@ -479,7 +522,7 @@ function submitDrop() {
     position: { x: parseFloat(rx.toFixed(1)), y: parseFloat(ry.toFixed(1)) }
   };
 
-  saveUserDrop(drop);
+  await saveUserDrop(drop);
   renderCheckpoints();
   buildMeadowCards();
 
@@ -531,17 +574,25 @@ function wireEvents() {
       if (leaveOpen)        closeLeaveForm();
       else if (activeDrop)  closeDrop();
       else if (meadowOpen)  closeMeadow();
-      else if (document.getElementById('panel-canvas').classList.contains('open'))  closeCanvasRoom();
-      else if (document.getElementById('panel-library').classList.contains('open')) closeLibrary();
+      else if (document.getElementById('panel-canvas').classList.contains('open'))       closeCanvasRoom();
+      else if (document.getElementById('panel-library').classList.contains('open'))      closeLibrary();
+      else if (document.getElementById('panel-noticeboard').classList.contains('open')) closeNoticeBoard();
+      else if (document.getElementById('panel-camera').classList.contains('open'))      closeCameraCompass();
     }
   });
 
-  // close canvas/library on backdrop click
+  // close panels on backdrop click
   document.getElementById('panel-canvas').addEventListener('click', e => {
     if (e.target.id === 'panel-canvas') closeCanvasRoom();
   });
   document.getElementById('panel-library').addEventListener('click', e => {
     if (e.target.id === 'panel-library') closeLibrary();
+  });
+  document.getElementById('panel-noticeboard').addEventListener('click', e => {
+    if (e.target.id === 'panel-noticeboard') closeNoticeBoard();
+  });
+  document.getElementById('panel-camera').addEventListener('click', e => {
+    if (e.target.id === 'panel-camera') closeCameraCompass();
   });
 
   buildSparkles();
@@ -589,10 +640,11 @@ function initMapBoy() {
   const wrap = document.getElementById('world-img-wrap');
   if (wrap) {
     wrap.addEventListener('click', e => {
-      // Ignore clicks on UI overlays, zone buttons, and open modals
+      // Ignore clicks on UI overlays and any zone/action buttons
       if (e.target.closest('#world-overlay') ||
           e.target.closest('.map-zone-btn')  ||
-          leaveOpen || activeDrop) return;
+          leaveOpen || activeDrop ||
+          document.getElementById('panel-noticeboard').classList.contains('open')) return;
       const rect = wrap.getBoundingClientRect();
       const el   = document.getElementById('map-boy');
       const boyH = el ? (el.offsetHeight / wrap.offsetHeight) * 100 : 24;
@@ -637,16 +689,20 @@ function mapBoyLoop(ts) {
     const tdy = mapBoyTarget.y - mapBoyY;
     const dist = Math.sqrt(tdx * tdx + tdy * tdy);
     // Use a larger arrival radius for zone walks so the avatar stops naturally nearby
-    const stopDist = mapBoyArrivalCb ? 4 : 0.3;
+    const stopDist = mapBoyArrivalCb ? 5 : 0.3;
     if (dist > stopDist) {
-      dx = (tdx / dist) * speed;
-      dy = (tdy / dist) * speed;
+      // Slow down in the last stretch so the avatar eases in smoothly
+      const ease = dist < stopDist * 3 ? 0.5 : 1;
+      dx = (tdx / dist) * speed * ease;
+      dy = (tdy / dist) * speed * ease;
     } else {
+      // Snap to stop — no more micro-corrections
       mapBoyTarget = null;
+      stopMapWalk();
       if (mapBoyArrivalCb) {
         const cb = mapBoyArrivalCb;
         mapBoyArrivalCb = null;
-        cb();
+        setTimeout(cb, 120); // brief pause before panel opens
       }
     }
   }
@@ -719,13 +775,124 @@ let brushSize   = 6;
 let canvasDrawing = false;
 let canvasReady   = false;
 
-// Walk the avatar to a map % position, then fire onArrival
+// ══════════════════════════════════════════════════════════════════
+// CAMERA COMPASS
+// ══════════════════════════════════════════════════════════════════
+
+// Seed photos — students can add links at runtime (stored in sessionStorage)
+const SEED_CAMERA_LINKS = [
+  { url: 'https://www.instagram.com/camberwell_arts/', caption: 'Camberwell Arts Instagram', type: 'link' },
+  { url: 'https://www.arts.ac.uk/colleges/camberwell-college-of-arts', caption: 'Camberwell College of Arts', type: 'link' },
+];
+
+function getCameraLinks() {
+  const saved = JSON.parse(sessionStorage.getItem('cameraLinks') || '[]');
+  return [...SEED_CAMERA_LINKS, ...saved];
+}
+function saveCameraLink(entry) {
+  const existing = JSON.parse(sessionStorage.getItem('cameraLinks') || '[]');
+  existing.unshift(entry);
+  sessionStorage.setItem('cameraLinks', JSON.stringify(existing));
+}
+
+function openCameraCompass() {
+  walkToZone(50, 28, () => {
+    buildCameraGrid();
+    document.getElementById('panel-camera').classList.add('open');
+  });
+}
+function closeCameraCompass() {
+  document.getElementById('panel-camera').classList.remove('open');
+}
+
+function buildCameraGrid() {
+  const grid = document.getElementById('camera-grid');
+  if (!grid) return;
+  const links = getCameraLinks();
+  if (!links.length) {
+    grid.innerHTML = '<p style="color:#4060a0;font-style:italic">No photos pinned yet — share yours above.</p>';
+    return;
+  }
+  grid.innerHTML = links.map(entry => {
+    const isImg = /\.(jpg|jpeg|png|gif|webp|svg)(\?|$)/i.test(entry.url);
+    const thumb = isImg
+      ? `<img class="camera-card-thumb" src="${entry.url}" alt="${entry.caption || ''}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'camera-card-link-preview\\'><span>🔗</span><span>${entry.url}</span></div>'">`
+      : `<div class="camera-card-link-preview"><span>🔗</span><span>${entry.url}</span></div>`;
+    return `
+      <div class="camera-card" onclick="window.open('${entry.url}','_blank','noopener')">
+        ${thumb}
+        <div class="camera-card-body">
+          ${entry.caption ? `<div class="camera-card-caption">${entry.caption}</div>` : ''}
+          <div class="camera-card-meta">${entry.url.replace(/^https?:\/\//,'').split('/')[0]}</div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function submitCameraLink() {
+  const url     = document.getElementById('camera-link-input').value.trim();
+  const caption = document.getElementById('camera-caption-input').value.trim();
+  if (!url) { showToast('Paste a link first!'); return; }
+  try { new URL(url); } catch { showToast('That doesn\'t look like a valid link.'); return; }
+  saveCameraLink({ url, caption, type: 'link' });
+  document.getElementById('camera-link-input').value   = '';
+  document.getElementById('camera-caption-input').value = '';
+  buildCameraGrid();
+  showToast('📌 Pinned to the Camera Compass!');
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// NOTICE BOARD
+// ══════════════════════════════════════════════════════════════════
+
+const SN_COLORS  = ['sn-yellow','sn-pink','sn-blue','sn-green','sn-orange'];
+const SN_ROTATES = [-3, -1.5, 0, 1.5, 3, -2.5, 2, -0.5];
+
+function openNoticeBoard() {
+  walkToZone(43, 52, () => {
+    buildNoticeBoardPins();
+    document.getElementById('panel-noticeboard').classList.add('open');
+  });
+}
+function closeNoticeBoard() {
+  document.getElementById('panel-noticeboard').classList.remove('open');
+}
+
+function buildNoticeBoardPins() {
+  const container = document.getElementById('noticeboard-pins');
+  if (!container) return;
+  const drops = getDrops().filter(d => d.type === 'text');
+  container.innerHTML = drops.map((drop, i) => {
+    const color  = SN_COLORS[i % SN_COLORS.length];
+    const rotate = SN_ROTATES[i % SN_ROTATES.length];
+    const preview = drop.content.length > 160
+      ? drop.content.slice(0, 160) + '…'
+      : drop.content;
+    return `
+      <div class="sticky-note ${color}"
+           style="transform:rotate(${rotate}deg)"
+           onclick="openDrop('${drop.id}')">
+        <div class="sn-text">"${preview}"</div>
+        <div class="sn-footer">
+          <span class="sn-mood">${MOOD_ICONS[drop.mood] || ''} ${drop.mood}</span>
+          <span>${formatDate(drop.timestamp)}</span>
+        </div>
+      </div>`;
+  }).join('') || '<p style="color:#a8d8a8;font-style:italic;padding:8px">No notes yet — be the first to leave one.</p>';
+}
+
+// ── Walk the avatar to a map % position, then fire onArrival
 function walkToZone(xPct, yPct, onArrival) {
   const el   = document.getElementById('map-boy');
   const wrap = document.getElementById('world-img-wrap');
   const boyH = (el && wrap) ? (el.offsetHeight / wrap.offsetHeight) * 100 : 24;
   mapBoyArrivalCb = onArrival;
   mapBoyTarget    = { x: xPct, y: yPct - boyH };  // feet land at yPct
+}
+
+function openLeaveFromPicnic() {
+  walkToZone(74, 26, () => openLeaveForm());
 }
 
 function openCanvasRoom() {

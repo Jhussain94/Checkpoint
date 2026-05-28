@@ -92,13 +92,39 @@
       <span class="mzb-label">📚 Library</span>
     </button>
 
-    <!-- HTML overlay: title + drop button sit above the map -->
+    <!-- Picnic blanket — vinyl disc + film tape, top right → Leave a Drop -->
+    <button class="map-zone-btn mzb-drop" id="zone-picnic-btn"
+            style="left:74%;top:26%"
+            onclick="openLeaveFromPicnic()"
+            aria-label="Leave a Drop">
+      <span class="mzb-dot"></span>
+      <span class="mzb-label">✏️ Leave a drop</span>
+    </button>
+
+    <!-- Green notice board — centre of map → show student notes -->
+    <button class="map-zone-btn mzb-board" id="zone-board-btn"
+            style="left:43%;top:52%"
+            onclick="openNoticeBoard()"
+            aria-label="Open Notice Board">
+      <span class="mzb-dot"></span>
+      <span class="mzb-label">📋 Notice Board</span>
+    </button>
+
+    <!-- Camera on tripod — upper centre → Camera Compass (photo links) -->
+    <button class="map-zone-btn mzb-camera" id="zone-camera-btn"
+            style="left:50%;top:28%"
+            onclick="openCameraCompass()"
+            aria-label="Open Camera Compass">
+      <span class="mzb-dot"></span>
+      <span class="mzb-label">📷 Camera Compass</span>
+    </button>
+
+    <!-- HTML overlay: title sits above the map -->
     <div id="world-overlay">
       <div id="world-title-block">
         <div class="world-title">CHECKPOINT</div>
         <div class="world-subtitle">A digital archive by Camberwell students</div>
       </div>
-      <button id="add-drop-fab" onclick="openLeaveForm()">+ Leave a drop</button>
     </div>
   </div>
 </div>
@@ -242,6 +268,51 @@
 
 
 <!-- ──────────────────────────────────────────────────────────────
+     PANEL — CAMERA COMPASS (photo links / Instagram)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-camera" role="dialog" aria-modal="true" aria-label="Camera Compass">
+  <div class="camera-panel-inner">
+    <div class="camera-panel-header">
+      <div class="camera-panel-title">📷 Camera Compass</div>
+      <button class="panel-close-btn cam-close" onclick="closeCameraCompass()" aria-label="Close">✕</button>
+    </div>
+    <p class="camera-panel-sub">Photos and moments shared by Camberwell students.</p>
+
+    <!-- Submit a link -->
+    <div class="camera-submit-row">
+      <input class="form-input cam-input" id="camera-link-input" type="url"
+             placeholder="Instagram, Behance, VSCO, or photo URL…"/>
+      <input class="form-input cam-input" id="camera-caption-input" type="text"
+             placeholder="Caption (optional)" maxlength="100"/>
+      <button class="camera-submit-btn" onclick="submitCameraLink()">📌 Pin it</button>
+    </div>
+
+    <!-- Grid of submitted photo links -->
+    <div class="camera-grid" id="camera-grid">
+      <!-- populated by JS -->
+    </div>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — NOTICE BOARD
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-noticeboard" role="dialog" aria-modal="true" aria-label="Notice Board">
+  <div class="noticeboard-inner">
+    <div class="noticeboard-header">
+      <div class="noticeboard-title">📋 Notice Board</div>
+      <button class="panel-close-btn nb-close" onclick="closeNoticeBoard()" aria-label="Close">✕</button>
+    </div>
+    <p class="noticeboard-sub">Notes left behind by students who passed through.</p>
+    <div class="noticeboard-pins" id="noticeboard-pins">
+      <!-- populated by JS -->
+    </div>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
      PANEL — BLANK CANVAS (drawing room)
 ────────────────────────────────────────────────────────────────── -->
 <div id="panel-canvas" role="dialog" aria-modal="true" aria-label="Blank Canvas">
@@ -347,22 +418,21 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 
-<!-- Ambient audio — loading screen bell -->
+<!-- Loading screen music -->
+<audio id="loading-audio" loop preload="auto">
+  <source src="sound/idoberg-summer-tropical-house-guitar-loop-357385.mp3" type="audio/mpeg"/>
+</audio>
+
+<!-- Map ambient audio -->
 <audio id="ambient-audio" loop preload="auto">
   <source src="sound/First%20Bell%20Summer.mp3" type="audio/mpeg"/>
 </audio>
 
 <!-- ── Scripts ──────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/game.js"></script>
 <script src="js/drops.js"></script>
 <script src="js/app.js"></script>
-<script>
-  // Update drop count badge once data is ready
-  document.addEventListener('DOMContentLoaded', () => {
-    const badge = document.getElementById('drop-count');
-    if (badge) badge.textContent = getDrops().length + ' drops in the world';
-  });
-</script>
 
 </body>
 </html>
