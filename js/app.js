@@ -42,7 +42,10 @@ function showScreen(id) {
 }
 
 function transitionTo(id) {
-  if (id === 'world') stopLoadingAnimations(); // clean up before leaving
+  if (id === 'world') {
+    stopLoadingAnimations();
+    startAmbientAudio(); // called directly from click handler — always allowed by browsers
+  }
   const from = document.getElementById('screen-' + currentScreen);
   if (from) {
     from.style.transition = 'opacity 0.7s ease';
@@ -62,7 +65,8 @@ function onSceneLoaded() {
 
   positionStartButton();
   startLoadingAnimations();  // boy walk + wind particles begin immediately
-  startAmbientAudio();       // bell ambience plays throughout loading screen
+  // Audio is NOT attempted here — browsers block autoplay before a user gesture.
+  // It is started directly inside transitionTo() which runs from the START button click.
 
   const fill    = document.getElementById('loading-fill');
   const text    = document.getElementById('loading-text');
@@ -112,19 +116,7 @@ function stopLoadingAnimations() {
 }
 
 function reduceAudioForMap() {
-  const audio = document.getElementById('ambient-audio');
-  if (!audio) return;
-  // Pre-set volume even when paused so it starts at map level when unlocked
-  if (audio.paused) { audio.volume = 0.12; return; }
-  const tick = () => {
-    if (audio.volume > 0.12) {
-      audio.volume = Math.max(0.12, audio.volume - 0.02);
-      setTimeout(tick, 60);
-    } else {
-      audio.volume = 0.12;
-    }
-  };
-  tick();
+  // Audio now starts at map volume (0.12) directly — nothing to fade.
 }
 
 // ── FALLING LEAVES FROM TREES ─────────────────────────────────────
@@ -167,46 +159,19 @@ function startFallingLeaves() {
 }
 
 // ── AMBIENT AUDIO ─────────────────────────────────────────────
+// startAmbientAudio() must be called directly from a user-gesture handler
+// (e.g. a click callback) so every browser permits audio.play().
 let audioStarted = false;
 
 function startAmbientAudio() {
   const audio = document.getElementById('ambient-audio');
   if (!audio || audioStarted) return;
-  if (audio.volume < 0.12) audio.volume = 0.30; // don't override if reduceAudioForMap pre-set it
-  else audio.volume = 0.30;
-  audio.play().then(() => {
-    audioStarted = true;
-  }).catch(() => {
-    // Autoplay blocked — resume on first gesture without overriding volume
-    function tryUnlock() {
-      if (audioStarted) return cleanup();
-      audio.play().then(() => { audioStarted = true; cleanup(); }).catch(() => {});
-    }
-    function cleanup() {
-      document.removeEventListener('click',      tryUnlock);
-      document.removeEventListener('keydown',    tryUnlock);
-      document.removeEventListener('touchstart', tryUnlock);
-    }
-    document.addEventListener('click',      tryUnlock);
-    document.addEventListener('keydown',    tryUnlock);
-    document.addEventListener('touchstart', tryUnlock);
-  });
-}
-
-function fadeOutAudio() {
-  const audio = document.getElementById('ambient-audio');
-  if (!audio || audio.paused) return;
-  const tick = () => {
-    if (audio.volume > 0.04) {
-      audio.volume = Math.max(0, audio.volume - 0.04);
-      setTimeout(tick, 50);
-    } else {
-      audio.pause();
-      audio.volume = 0.30;
-      audioStarted = false;
-    }
-  };
-  tick();
+  audio.volume = 0.12; // map volume — soft background level
+  audio.play()
+    .then(() => { audioStarted = true; })
+    .catch(() => {
+      // Extremely rare — just silently skip; user can interact again if needed
+    });
 }
 
 // ── START BUTTON POSITIONING ──────────────────────────────────
