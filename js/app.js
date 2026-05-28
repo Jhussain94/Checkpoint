@@ -205,11 +205,21 @@ function fadeOutLoadingAudio() {
 // startAmbientAudio() must be called directly from a user-gesture handler
 // (e.g. a click callback) so every browser permits audio.play().
 let audioStarted = false;
+let audioMuted   = false;
+
+function toggleMapAudio() {
+  const audio = document.getElementById('ambient-audio');
+  const btn   = document.getElementById('vol-toggle');
+  if (!audio) return;
+  audioMuted   = !audioMuted;
+  audio.muted  = audioMuted;
+  if (btn) btn.textContent = audioMuted ? '🔇' : '🔊';
+}
 
 function startAmbientAudio() {
   const audio = document.getElementById('ambient-audio');
   if (!audio || audioStarted) return;
-  audio.volume = 0.45;
+  audio.volume = 0.20;
   const p = audio.play();
   if (p !== undefined) {
     p.then(() => {
