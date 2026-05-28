@@ -38,7 +38,7 @@ function showScreen(id) {
   const el = document.getElementById('screen-' + id);
   if (el) { el.classList.add('active'); currentScreen = id; }
   // Start the game engine when the world screen becomes active
-  if (id === 'world') setTimeout(() => { if (typeof initGame === 'function') initGame(); }, 80);
+  if (id === 'world') setTimeout(() => { initMapBoy(); }, 80);
 }
 
 function transitionTo(id) {
@@ -102,33 +102,52 @@ let boyFrameTimer = null; // kept so stopLoadingAnimations is safe to call
 
 function startLoadingAnimations() {
   // Boy walk animation is pure CSS — no JS needed.
+  startFallingLeaves();
 
-  // Scatter wind particles (leaves + petals + sparkles)
-  const container = document.getElementById('wind-particles');
-  if (container && !container.childElementCount) {
-    const items   = ['🍃','🌸','🍃','🌿','✦','🍃','🌸','·','🍃','✿'];
-    const count   = 20;
-    for (let i = 0; i < count; i++) {
-      const leaf = document.createElement('span');
-      leaf.className  = 'wind-leaf';
-      leaf.textContent = items[i % items.length];
-      leaf.style.cssText = [
-        `--sz:${10 + Math.random() * 10}px`,
-        `--dur:${4  + Math.random() *  5}s`,
-        `--del:${     Math.random() *  7}s`,
-        `--y:${10  + Math.random() * 72}%`,
-        `--op:${0.5 + Math.random() * 0.4}`,
-        `--rot:${160 + Math.random() * 360}deg`,
-        `--lift:${-8 - Math.random() * 35}px`,
-      ].join(';');
-      container.appendChild(leaf);
-    }
-  }
+  // Wind particles removed — falling leaves handle the leaf animation
 }
 
 function stopLoadingAnimations() {
-  // CSS animation — nothing to cancel
   fadeOutAudio();
+}
+
+// ── FALLING LEAVES FROM TREES ─────────────────────────────────────
+const TREE_POSITIONS = [
+  { x: 9,  y: 28 },   // left-side tree canopy
+  { x: 48, y: 28 },   // middle tree canopy
+];
+
+function startFallingLeaves() {
+  const container = document.getElementById('falling-leaves');
+  if (!container) return;
+
+  function spawnLeaf(tree) {
+    const screen = document.getElementById('screen-arrival');
+    if (!screen || !screen.classList.contains('active')) return;
+
+    const leaf = document.createElement('img');
+    leaf.src       = 'img/Leaf.png';
+    leaf.className = 'fall-leaf';
+
+    const dur = 12 + Math.random() * 8;   // 12–20 seconds — very slow fall
+    leaf.style.left = (tree.x + (-2 + Math.random() * 4)) + '%';
+    leaf.style.top  = (tree.y + (Math.random() * 3)) + '%';
+    leaf.style.setProperty('--lsz',      (14 + Math.random() * 10) + 'px');
+    leaf.style.setProperty('--ldur',     dur + 's');
+    leaf.style.setProperty('--leaf-dx',  (-30 + Math.random() * 60) + 'px');
+    leaf.style.setProperty('--leaf-dy',  (200 + Math.random() * 120) + 'px');
+    leaf.style.setProperty('--leaf-rot', (160 + Math.random() * 220) + 'deg');
+
+    container.appendChild(leaf);
+    setTimeout(() => leaf.remove(), (dur + 1) * 1000);
+  }
+
+  TREE_POSITIONS.forEach(tree => {
+    function scheduleNext() {
+      setTimeout(() => { spawnLeaf(tree); scheduleNext(); }, 5000 + Math.random() * 5000);
+    }
+    setTimeout(() => { spawnLeaf(tree); scheduleNext(); }, 1000 + Math.random() * 2000);
+  });
 }
 
 // ── AMBIENT AUDIO ─────────────────────────────────────────────
@@ -535,4 +554,135 @@ function showToast(msg) {
   t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+// ── MAP AVATAR ────────────────────────────────────────────────────
+let mapBoyX      = 48;
+let mapBoyY      = 80;
+let mapBoyTarget = null;
+let mapFrameTimer = null;
+let mapFrameIdx   = 0;
+let mapBoyActive  = false;
+let lastMapTime   = 0;
+const MAP_SPEED   = 0.25;   // % per 16ms
+const MAP_FRAMES  = [1, 2, 3, 2];
+const mapKeys     = {};
+
+function initMapBoy() {
+  if (mapBoyActive) return;
+  mapBoyActive = true;
+  updateMapBoyPos();
+  showMapFrame(1);
+
+  document.addEventListener('keydown', e => { mapKeys[e.key.toLowerCase()] = true; });
+  document.addEventListener('keyup',   e => { mapKeys[e.key.toLowerCase()] = false; });
+
+  const wrap = document.getElementById('world-img-wrap');
+  if (wrap) {
+    wrap.addEventListener('click', e => {
+      if (e.target.closest('#world-overlay') || leaveOpen || activeDrop) return;
+      const rect  = wrap.getBoundingClientRect();
+      const el    = document.getElementById('map-boy');
+      // Offset Y so the feet land at the click point, not the top of the character
+      const boyH  = el ? (el.offsetHeight / wrap.offsetHeight) * 100 : 24;
+      mapBoyTarget = {
+        x: ((e.clientX - rect.left) / rect.width)  * 100,
+        y: ((e.clientY - rect.top)  / rect.height) * 100 - boyH,
+      };
+    });
+  }
+
+  requestAnimationFrame(mapBoyLoop);
+}
+
+function mapBoyLoop(ts) {
+  if (currentScreen !== 'world') { lastMapTime = 0; requestAnimationFrame(mapBoyLoop); return; }
+
+  // Delta-time: consistent speed regardless of frame rate
+  const dt    = lastMapTime ? Math.min(ts - lastMapTime, 50) : 16;
+  lastMapTime = ts;
+  const speed = MAP_SPEED * (dt / 16);
+
+  const typing = document.activeElement &&
+    (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA');
+
+  let dx = 0, dy = 0;
+
+  if (!typing) {
+    if (mapKeys['w'] || mapKeys['arrowup'])    dy = -speed;
+    if (mapKeys['s'] || mapKeys['arrowdown'])  dy =  speed;
+    if (mapKeys['a'] || mapKeys['arrowleft'])  dx = -speed;
+    if (mapKeys['d'] || mapKeys['arrowright']) dx =  speed;
+
+    // Normalise diagonal movement so it isn't faster
+    if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+  }
+
+  if (dx === 0 && dy === 0 && mapBoyTarget) {
+    const tdx = mapBoyTarget.x - mapBoyX;
+    const tdy = mapBoyTarget.y - mapBoyY;
+    const dist = Math.sqrt(tdx * tdx + tdy * tdy);
+    if (dist > 0.3) {
+      dx = (tdx / dist) * speed;
+      dy = (tdy / dist) * speed;
+    } else {
+      mapBoyTarget = null;
+    }
+  }
+
+  if (dx !== 0 || dy !== 0) {
+    // Clamp to frame edges using actual element dimensions
+    const el   = document.getElementById('map-boy');
+    const wrap = document.getElementById('world-img-wrap');
+    let minX = 0, maxX = 100, minY = 0, maxY = 76;
+    if (el && wrap) {
+      const halfW = (el.offsetWidth  / wrap.offsetWidth)  * 50;
+      const boyH  = (el.offsetHeight / wrap.offsetHeight) * 100;
+      minX = halfW;
+      maxX = 100 - halfW;
+      maxY = 100 - boyH;
+    }
+    mapBoyX = Math.max(minX, Math.min(maxX, mapBoyX + dx));
+    mapBoyY = Math.max(minY, Math.min(maxY, mapBoyY + dy));
+    updateMapBoyPos();
+    setMapBoyDir(dx);
+    if (!mapFrameTimer) startMapWalk();
+  } else {
+    stopMapWalk();
+  }
+
+  requestAnimationFrame(mapBoyLoop);
+}
+
+function updateMapBoyPos() {
+  const el = document.getElementById('map-boy');
+  if (!el) return;
+  el.style.left = mapBoyX + '%';
+  el.style.top  = mapBoyY + '%';
+}
+
+function setMapBoyDir(dx) {
+  const el = document.getElementById('map-boy');
+  if (!el || dx === 0) return;
+  el.style.transform = `translateX(-50%) scaleX(${dx < 0 ? -1 : 1})`;
+}
+
+function startMapWalk() {
+  if (mapFrameTimer) return;
+  mapFrameTimer = setInterval(() => {
+    mapFrameIdx = (mapFrameIdx + 1) % MAP_FRAMES.length;
+    showMapFrame(MAP_FRAMES[mapFrameIdx]);
+  }, 180);
+}
+
+function stopMapWalk() {
+  if (mapFrameTimer) { clearInterval(mapFrameTimer); mapFrameTimer = null; }
+  showMapFrame(1);
+}
+
+function showMapFrame(n) {
+  [1, 2, 3].forEach(i => {
+    const f = document.getElementById('map-f' + i);
+    if (f) f.style.opacity = (i === n) ? '1' : '0';
+  });
 }

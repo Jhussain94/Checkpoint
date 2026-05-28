@@ -157,15 +157,62 @@ html, body {
   100% { left: calc(100% + 80px); }
 }
 
+/* ── FALLING LEAVES FROM TREES ───────────────────────────────────────────── */
+#falling-leaves {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  overflow: hidden;
+}
+.fall-leaf {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  width: var(--lsz, 18px);
+  height: auto;
+  animation: leafFall var(--ldur, 14s) ease-in 0s 1 forwards;
+}
+@keyframes leafFall {
+  0%   { opacity: 0;    transform: translate(0, 0)                                                               rotate(0deg); }
+  6%   { opacity: 0.85; }
+  90%  { opacity: 0.5;  }
+  100% { opacity: 0;    transform: translate(var(--leaf-dx, 20px), var(--leaf-dy, 220px)) rotate(var(--leaf-rot, 290deg)); }
+}
+
 /* ── WIND PARTICLES ──────────────────────────────────────────────────────── */
 #wind-particles { position: absolute; inset: 0; pointer-events: none; z-index: 9; overflow: hidden; }
+
+/* ── FALLING LEAVES FROM TREES ───────────────────────────────────────────── */
+#falling-leaves {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 6;
+  overflow: hidden;
+}
+.fall-leaf {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  width: var(--lsz, 20px);
+  height: auto;
+  animation: leafFall var(--ldur, 14s) ease-in 0s 1 forwards;
+}
+@keyframes leafFall {
+  0%   { opacity: 0;    transform: translate(0, 0)                                                                      rotate(0deg);           }
+  6%   { opacity: 0.9;  }
+  90%  { opacity: 0.5;  }
+  100% { opacity: 0;    transform: translate(var(--leaf-dx, 20px), var(--leaf-dy, 220px)) rotate(var(--leaf-rot, 290deg)); }
+}
 
 .wind-leaf {
   position: absolute;
   pointer-events: none;
   opacity: 0;
   top: var(--y, 30%);
-  font-size: var(--sz, 14px);
+  width: var(--sz, 14px);
+  height: auto;
   animation: leafDrift var(--dur, 5s) ease-in-out var(--del, 0s) infinite;
   will-change: left, opacity, transform;
 }
@@ -242,6 +289,26 @@ html, body {
   align-items: center;
   justify-content: center;
 }
+
+/* ── MAP AVATAR ──────────────────────────────────────────────────────────── */
+#map-boy {
+  position: absolute;
+  height: 24%;
+  width: auto;
+  pointer-events: none;
+  z-index: 10;
+  transform: translateX(-50%);
+  will-change: left, top;
+}
+.map-frame {
+  position: absolute;
+  bottom: 0; left: 0;
+  height: 100%; width: auto;
+  opacity: 0;
+}
+#map-f1 { opacity: 1; transform: translateX(  2%); }
+#map-f2 {             transform: translateX(-21%); }
+#map-f3 {             transform: translateX(-71%); }
 
 /* Map image — fills full width, scales height proportionally, nothing cropped */
 #map-bg {
