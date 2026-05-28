@@ -156,29 +156,32 @@ function _fromRow(r) {
 function getDrops() { return _cache; }
 
 async function saveUserDrop(drop) {
+  // Always add to cache immediately so the UI updates regardless of network
+  _cache.unshift(drop);
+
   if (_sb) {
-    const { error } = await _sb.from('drops').insert({
-      type:       drop.type,
-      content:    drop.content,
-      caption:    drop.caption || null,
-      mood:       drop.mood,
-      area:       drop.area,
-      username:   drop.username,
-      position_x: drop.position.x,
-      position_y: drop.position.y,
-    });
-    if (error) {
-      console.warn('[Checkpoint] Supabase insert error:', error.message);
-    } else {
-      _cache.unshift(drop);  // optimistic: show immediately
-      return;
+    try {
+      const { error } = await _sb.from('drops').insert({
+        type:       drop.type,
+        content:    drop.content,
+        caption:    drop.caption || null,
+        mood:       drop.mood,
+        area:       drop.area,
+        username:   drop.username,
+        position_x: drop.position.x,
+        position_y: drop.position.y,
+      });
+      if (error) console.warn('[Checkpoint] Supabase insert error:', error.message);
+    } catch (e) {
+      console.warn('[Checkpoint] Supabase insert exception:', e.message);
     }
+    return;
   }
-  // Fallback: sessionStorage (no Supabase or insert failed)
+
+  // No Supabase — persist to sessionStorage as fallback
   const local = JSON.parse(sessionStorage.getItem('userDrops') || '[]');
   local.push(drop);
   sessionStorage.setItem('userDrops', JSON.stringify(local));
-  _cache.push(drop);
 }
 
 // ── INIT — call once before rendering anything ────────────────────────────────
@@ -200,10 +203,8 @@ async function initDB() {
 
     if (error) throw error;
 
-    // Merge live drops with seed data (seed shown for visual richness until real drops come in)
-    const liveIds = new Set(data.map(r => String(r.id)));
-    const seeds   = DROPS_SEED.filter(d => !liveIds.has(d.id));
-    _cache = [...data.map(_fromRow), ...seeds];
+    // Only real user drops — no seed data mixed in
+    _cache = data.map(_fromRow);
 
     // Subscribe to new drops in real time
     _sb.channel('drops-live')

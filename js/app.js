@@ -863,24 +863,35 @@ function closeNoticeBoard() {
 function buildNoticeBoardPins() {
   const container = document.getElementById('noticeboard-pins');
   if (!container) return;
-  const drops = getDrops().filter(d => d.type === 'text');
+  const drops = getDrops();
+  if (!drops.length) {
+    container.innerHTML = '<p style="color:#a8d8a8;font-style:italic;padding:8px">No drops yet — be the first to leave one.</p>';
+    return;
+  }
   container.innerHTML = drops.map((drop, i) => {
     const color  = SN_COLORS[i % SN_COLORS.length];
     const rotate = SN_ROTATES[i % SN_ROTATES.length];
-    const preview = drop.content.length > 160
-      ? drop.content.slice(0, 160) + '…'
-      : drop.content;
+
+    let preview;
+    if (drop.type === 'song' || drop.type === 'playlist') {
+      preview = '🎵 ' + (drop.caption || 'A song drop');
+    } else if (drop.type === 'video') {
+      preview = '🎬 ' + (drop.caption || 'A video drop');
+    } else {
+      preview = drop.content.length > 160 ? drop.content.slice(0, 160) + '…' : drop.content;
+    }
+
     return `
       <div class="sticky-note ${color}"
            style="transform:rotate(${rotate}deg)"
            onclick="openDrop('${drop.id}')">
-        <div class="sn-text">"${preview}"</div>
+        <div class="sn-text">${preview}</div>
         <div class="sn-footer">
           <span class="sn-mood">${MOOD_ICONS[drop.mood] || ''} ${drop.mood}</span>
           <span>${formatDate(drop.timestamp)}</span>
         </div>
       </div>`;
-  }).join('') || '<p style="color:#a8d8a8;font-style:italic;padding:8px">No notes yet — be the first to leave one.</p>';
+  }).join('');
 }
 
 // ── Walk the avatar to a map % position, then fire onArrival
