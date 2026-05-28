@@ -400,6 +400,12 @@ function closeDrop() {
   document.getElementById('modal-drop').classList.remove('open');
   activeDrop = null;
 
+  // Clear iframe after animation so embedded audio stops immediately
+  setTimeout(() => {
+    const inner = document.getElementById('drop-content-inner');
+    if (inner) inner.innerHTML = '';
+  }, 480);
+
   // Resume background music if it was paused for the drop
   if (_audioPausedForDrop) {
     _audioPausedForDrop = false;
@@ -953,6 +959,7 @@ function openNoticeBoard() {
 }
 function closeNoticeBoard() {
   document.getElementById('panel-noticeboard').classList.remove('open');
+  if (activeDrop) closeDrop();
 }
 
 function buildNoticeBoardPins() {
