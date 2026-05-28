@@ -28,7 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
   buildMeadowCards();
   buildLeaveForm();
   wireEvents();
-  // Loading scene is driven by campusBg.onload below — no img.complete check needed
+  const img = document.getElementById('arrival-scene');
+  if (img && img.complete) onSceneLoaded();
 });
 
 // ── SCREEN MANAGEMENT ─────────────────────────────────────────
@@ -126,121 +127,8 @@ function startLoadingAnimations() {
 }
 
 function stopLoadingAnimations() {
-  stopCloudAnimation();
+  // CSS animation — nothing to cancel
   fadeOutAudio();
-}
-
-// ── LOADING CANVAS — ANIMATED CLOUDS ─────────────────────────
-// Source image is 3508×2480. Cloud regions are fractional coords.
-// Each frame: draw full background, cover the original painted cloud with a
-// soft sky-coloured fill (colour sampled live from the canvas sky area), then
-// draw the cloud cutout at its drifted position.  Two clouds only.
-const CLOUD_DEFS = [
-  { sx:0.065, sy:0.052, sw:0.158, sh:0.108, speed:0.006 },  // left cloud
-  { sx:0.598, sy:0.026, sw:0.258, sh:0.148, speed:0.004 },  // right large cloud
-];
-const cloudOffsets = [0, 0];
-let cloudRaf    = null;
-let cloudActive = false;
-let skyR = 241, skyG = 238, skyB = 202;   // fallback sky colour
-
-const campusBg = new Image();
-campusBg.onload = function () {
-  onSceneLoaded();
-  const canvas = document.getElementById('arrival-canvas');
-  if (canvas) {
-    resizeArrivalCanvas(canvas);
-    startCloudAnimation(canvas);
-  }
-};
-campusBg.src = 'img/Loading%20Screen%20Finish.png';
-
-function resizeArrivalCanvas(canvas) {
-  const wrap = document.getElementById('arrival-img-wrap');
-  if (!canvas || !wrap) return;
-  canvas.width  = wrap.clientWidth;
-  canvas.height = wrap.clientHeight;
-}
-
-function startCloudAnimation(canvas) {
-  cloudActive = true;
-  const ctx  = canvas.getContext('2d');
-  const imgW = campusBg.naturalWidth;   // 3508
-  const imgH = campusBg.naturalHeight;  // 2480
-  let lastT  = 0;
-  let skySampled = false;
-
-  function frame(t) {
-    if (!cloudActive) return;
-    const dt = Math.min(t - lastT, 50) * 0.001;
-    lastT = t;
-
-    const W = canvas.width, H = canvas.height;
-    const imgAR = imgW / imgH, canAR = W / H;
-    let rW, rH, oX, oY;
-    if (canAR > imgAR) {
-      rW = W;  rH = W / imgAR;  oX = 0;           oY = (H - rH) / 2;
-    } else {
-      rH = H;  rW = H * imgAR;  oX = (W - rW) / 2; oY = 0;
-    }
-
-    // Draw full background
-    ctx.drawImage(campusBg, oX, oY, rW, rH);
-
-    // Sample the sky colour once from just above the clouds (top-left sky area)
-    if (!skySampled && rW > 0) {
-      const px = ctx.getImageData(
-        Math.round(oX + 0.03 * rW),
-        Math.round(oY + 0.02 * rH),
-        1, 1
-      ).data;
-      skyR = px[0]; skyG = px[1]; skyB = px[2];
-      skySampled = true;
-    }
-
-    CLOUD_DEFS.forEach((c, i) => {
-      cloudOffsets[i] += c.speed * W * dt;
-      const loopW = W + c.sw * rW + 20;
-      if (cloudOffsets[i] > loopW) cloudOffsets[i] -= loopW;
-
-      const cX = oX + c.sx * rW;
-      const cY = oY + c.sy * rH;
-      const cW = c.sw * rW;
-      const cH = c.sh * rH;
-
-      // Erase original painted cloud with a blurred sky-coloured fill
-      ctx.save();
-      ctx.filter = 'blur(6px)';
-      ctx.fillStyle = `rgb(${skyR},${skyG},${skyB})`;
-      ctx.fillRect(cX - 8, cY - 8, cW + 16, cH + 16);
-      ctx.filter = 'none';
-      ctx.restore();
-
-      // Draw the actual cloud pixels at the drifted x position
-      const dX = cX + cloudOffsets[i];
-      ctx.drawImage(campusBg,
-        c.sx * imgW, c.sy * imgH, c.sw * imgW, c.sh * imgH,
-        dX, cY, cW, cH
-      );
-
-      // Wrap-around: draw incoming copy from left if cloud is near right edge
-      if (dX + cW > W) {
-        ctx.drawImage(campusBg,
-          c.sx * imgW, c.sy * imgH, c.sw * imgW, c.sh * imgH,
-          dX - loopW, cY, cW, cH
-        );
-      }
-    });
-
-    cloudRaf = requestAnimationFrame(frame);
-  }
-
-  cloudRaf = requestAnimationFrame(frame);
-}
-
-function stopCloudAnimation() {
-  cloudActive = false;
-  if (cloudRaf) { cancelAnimationFrame(cloudRaf); cloudRaf = null; }
 }
 
 // ── AMBIENT AUDIO ─────────────────────────────────────────────
@@ -293,24 +181,33 @@ const BTN_W = 0.120;   // button width as fraction of image width
 const BTN_H = 0.065;   // button height as fraction of image height
 
 function positionStartButton() {
+  const img  = document.getElementById('arrival-scene');
   const btn  = document.getElementById('start-btn');
   const wrap = document.getElementById('arrival-img-wrap');
-  if (!btn || !wrap) return;
+  if (!img || !btn || !wrap) return;
 
-  const natW = (campusBg && campusBg.naturalWidth)  || 3508;
-  const natH = (campusBg && campusBg.naturalHeight) || 2480;
-  const imgAspect = natW / natH;
+  // The image wrapper now has CSS inset/border-radius — use its rendered
+  // dimensions so the button overlays the correct spot inside the frame.
+  const natW = img.naturalWidth  || 3508;
+  const natH = img.naturalHeight || 2480;
+  const imgAspect  = natW / natH;
   const vW = wrap.clientWidth;
   const vH = wrap.clientHeight;
   const vAspect = vW / vH;
 
+  // Cover math: find the rendered image rect (may extend beyond viewport)
   let rW, rH, oX, oY;
   if (vAspect > imgAspect) {
-    rW = vW; rH = vW / imgAspect; oX = 0;           oY = (vH - rH) / 2;
+    // Screen wider → scale by width, crop top & bottom
+    rW = vW; rH = vW / imgAspect;
+    oX = 0;  oY = (vH - rH) / 2;        // oY is negative when cropped
   } else {
-    rH = vH; rW = vH * imgAspect; oX = (vW - rW) / 2; oY = 0;
+    // Screen taller → scale by height, crop sides
+    rH = vH; rW = vH * imgAspect;
+    oX = (vW - rW) / 2; oY = 0;         // oX is negative when cropped
   }
 
+  // Position the invisible button over the painted START button
   const bW = rW * BTN_W;
   const bH = rH * BTN_H;
   btn.style.width     = bW + 'px';
@@ -602,12 +499,8 @@ function toYTEmbed(url) {
 
 // ── WIRE EVENTS ───────────────────────────────────────────────
 function wireEvents() {
-  // re-position START button and resize arrival canvas on window resize
-  window.addEventListener('resize', () => {
-    const canvas = document.getElementById('arrival-canvas');
-    if (canvas) resizeArrivalCanvas(canvas);
-    positionStartButton();
-  });
+  // re-position START button if window is resized
+  window.addEventListener('resize', positionStartButton);
 
   // close modals on backdrop click
   document.getElementById('modal-drop').addEventListener('click', e => {
