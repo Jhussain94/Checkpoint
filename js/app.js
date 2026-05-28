@@ -525,6 +525,7 @@ async function submitDrop() {
   await saveUserDrop(drop);
   renderCheckpoints();
   buildMeadowCards();
+  buildNoticeBoardPins(); // refresh board so new drop appears immediately
 
   // show success
   document.getElementById('leave-form-wrap').style.display = 'none';

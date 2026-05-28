@@ -640,6 +640,14 @@ html, body {
   transition: background 0.2s, color 0.2s;
 }
 .success-back:hover { background: var(--brown); color: white; }
+.success-board {
+  margin-top: 10px; background: #2d5a2a; border: none;
+  border-radius: 12px; padding: 10px 24px;
+  font-family: 'Fredoka One', cursive; font-size: 0.95rem;
+  color: #d8f0d0; cursor: pointer; display: block; width: 100%;
+  transition: background 0.2s;
+}
+.success-board:hover { background: #3a7a36; }
 
 /* ─── MEADOW PANEL ───────────────────────────────────────────────────────── */
 #panel-meadow {
