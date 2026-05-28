@@ -108,7 +108,23 @@ function startLoadingAnimations() {
 }
 
 function stopLoadingAnimations() {
-  fadeOutAudio();
+  reduceAudioForMap();
+}
+
+function reduceAudioForMap() {
+  const audio = document.getElementById('ambient-audio');
+  if (!audio) return;
+  // Pre-set volume even when paused so it starts at map level when unlocked
+  if (audio.paused) { audio.volume = 0.12; return; }
+  const tick = () => {
+    if (audio.volume > 0.12) {
+      audio.volume = Math.max(0.12, audio.volume - 0.02);
+      setTimeout(tick, 60);
+    } else {
+      audio.volume = 0.12;
+    }
+  };
+  tick();
 }
 
 // ── FALLING LEAVES FROM TREES ─────────────────────────────────────
@@ -156,20 +172,24 @@ let audioStarted = false;
 function startAmbientAudio() {
   const audio = document.getElementById('ambient-audio');
   if (!audio || audioStarted) return;
-  audio.volume = 0.30;
+  if (audio.volume < 0.12) audio.volume = 0.30; // don't override if reduceAudioForMap pre-set it
+  else audio.volume = 0.30;
   audio.play().then(() => {
     audioStarted = true;
   }).catch(() => {
-    // Autoplay blocked — start on first user interaction
-    const unlock = () => {
-      audio.play().then(() => { audioStarted = true; });
-      document.removeEventListener('click',      unlock);
-      document.removeEventListener('keydown',    unlock);
-      document.removeEventListener('touchstart', unlock);
-    };
-    document.addEventListener('click',      unlock, { once: true });
-    document.addEventListener('keydown',    unlock, { once: true });
-    document.addEventListener('touchstart', unlock, { once: true });
+    // Autoplay blocked — resume on first gesture without overriding volume
+    function tryUnlock() {
+      if (audioStarted) return cleanup();
+      audio.play().then(() => { audioStarted = true; cleanup(); }).catch(() => {});
+    }
+    function cleanup() {
+      document.removeEventListener('click',      tryUnlock);
+      document.removeEventListener('keydown',    tryUnlock);
+      document.removeEventListener('touchstart', tryUnlock);
+    }
+    document.addEventListener('click',      tryUnlock);
+    document.addEventListener('keydown',    tryUnlock);
+    document.addEventListener('touchstart', tryUnlock);
   });
 }
 
@@ -535,7 +555,17 @@ function wireEvents() {
       if (leaveOpen)        closeLeaveForm();
       else if (activeDrop)  closeDrop();
       else if (meadowOpen)  closeMeadow();
+      else if (document.getElementById('panel-canvas').classList.contains('open'))  closeCanvasRoom();
+      else if (document.getElementById('panel-library').classList.contains('open')) closeLibrary();
     }
+  });
+
+  // close canvas/library on backdrop click
+  document.getElementById('panel-canvas').addEventListener('click', e => {
+    if (e.target.id === 'panel-canvas') closeCanvasRoom();
+  });
+  document.getElementById('panel-library').addEventListener('click', e => {
+    if (e.target.id === 'panel-library') closeLibrary();
   });
 
   buildSparkles();
@@ -557,20 +587,23 @@ function showToast(msg) {
 }
 
 // ── MAP AVATAR ────────────────────────────────────────────────────
-let mapBoyX      = 48;
-let mapBoyY      = 80;
-let mapBoyTarget = null;
-let mapFrameTimer = null;
-let mapFrameIdx   = 0;
-let mapBoyActive  = false;
-let lastMapTime   = 0;
-const MAP_SPEED   = 0.25;   // % per 16ms
-const MAP_FRAMES  = [1, 2, 3, 2];
-const mapKeys     = {};
+let mapBoyX        = 48;
+let mapBoyY        = 80;
+let mapBoyTarget   = null;
+let mapBoyArrivalCb = null;   // fired when avatar reaches a zone target
+let mapFrameTimer  = null;
+let mapFrameIdx    = 0;
+let mapBoyActive   = false;
+let lastMapTime    = 0;
+const MAP_SPEED    = 0.25;   // % per 16ms
+const MAP_FRAMES   = [1, 2, 3, 2];
+const mapKeys      = {};
 
 function initMapBoy() {
   if (mapBoyActive) return;
   mapBoyActive = true;
+  mapBoyTarget = null;   // clear any stale target so avatar starts idle
+  stopMapWalk();         // ensure no walk cycle is running
   updateMapBoyPos();
   showMapFrame(1);
 
@@ -580,11 +613,13 @@ function initMapBoy() {
   const wrap = document.getElementById('world-img-wrap');
   if (wrap) {
     wrap.addEventListener('click', e => {
-      if (e.target.closest('#world-overlay') || leaveOpen || activeDrop) return;
-      const rect  = wrap.getBoundingClientRect();
-      const el    = document.getElementById('map-boy');
-      // Offset Y so the feet land at the click point, not the top of the character
-      const boyH  = el ? (el.offsetHeight / wrap.offsetHeight) * 100 : 24;
+      // Ignore clicks on UI overlays, zone buttons, and open modals
+      if (e.target.closest('#world-overlay') ||
+          e.target.closest('.map-zone-btn')  ||
+          leaveOpen || activeDrop) return;
+      const rect = wrap.getBoundingClientRect();
+      const el   = document.getElementById('map-boy');
+      const boyH = el ? (el.offsetHeight / wrap.offsetHeight) * 100 : 24;
       mapBoyTarget = {
         x: ((e.clientX - rect.left) / rect.width)  * 100,
         y: ((e.clientY - rect.top)  / rect.height) * 100 - boyH,
@@ -616,17 +651,27 @@ function mapBoyLoop(ts) {
 
     // Normalise diagonal movement so it isn't faster
     if (dx !== 0 && dy !== 0) { dx *= 0.707; dy *= 0.707; }
+
+    // Manual key input cancels any in-progress zone walk
+    if (dx !== 0 || dy !== 0) { mapBoyTarget = null; mapBoyArrivalCb = null; }
   }
 
   if (dx === 0 && dy === 0 && mapBoyTarget) {
     const tdx = mapBoyTarget.x - mapBoyX;
     const tdy = mapBoyTarget.y - mapBoyY;
     const dist = Math.sqrt(tdx * tdx + tdy * tdy);
-    if (dist > 0.3) {
+    // Use a larger arrival radius for zone walks so the avatar stops naturally nearby
+    const stopDist = mapBoyArrivalCb ? 4 : 0.3;
+    if (dist > stopDist) {
       dx = (tdx / dist) * speed;
       dy = (tdy / dist) * speed;
     } else {
       mapBoyTarget = null;
+      if (mapBoyArrivalCb) {
+        const cb = mapBoyArrivalCb;
+        mapBoyArrivalCb = null;
+        cb();
+      }
     }
   }
 
@@ -685,4 +730,256 @@ function showMapFrame(n) {
     const f = document.getElementById('map-f' + i);
     if (f) f.style.opacity = (i === n) ? '1' : '0';
   });
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// BLANK CANVAS ROOM
+// ══════════════════════════════════════════════════════════════════
+
+let canvasTool  = 'pen';
+let canvasColor = '#2a1a04';
+let brushSize   = 6;
+let canvasDrawing = false;
+let canvasReady   = false;
+
+// Walk the avatar to a map % position, then fire onArrival
+function walkToZone(xPct, yPct, onArrival) {
+  const el   = document.getElementById('map-boy');
+  const wrap = document.getElementById('world-img-wrap');
+  const boyH = (el && wrap) ? (el.offsetHeight / wrap.offsetHeight) * 100 : 24;
+  mapBoyArrivalCb = onArrival;
+  mapBoyTarget    = { x: xPct, y: yPct - boyH };  // feet land at yPct
+}
+
+function openCanvasRoom() {
+  walkToZone(10, 74, () => {
+    document.getElementById('panel-canvas').classList.add('open');
+    if (!canvasReady) initDrawingCanvas();
+  });
+}
+function closeCanvasRoom() {
+  document.getElementById('panel-canvas').classList.remove('open');
+}
+
+function initDrawingCanvas() {
+  canvasReady = true;
+  const cv  = document.getElementById('drawing-canvas');
+  const ctx = cv.getContext('2d');
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = cv.clientWidth, h = cv.clientHeight;
+    cv.width  = w * dpr;
+    cv.height = h * dpr;
+    ctx.scale(dpr, dpr);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function getPos(e) {
+    const r = cv.getBoundingClientRect();
+    const src = e.touches ? e.touches[0] : e;
+    return { x: src.clientX - r.left, y: src.clientY - r.top };
+  }
+
+  cv.addEventListener('pointerdown', e => {
+    if (canvasTool === 'text') return; // handled separately
+    canvasDrawing = true;
+    cv.setPointerCapture(e.pointerId);
+    ctx.beginPath();
+    const p = getPos(e);
+    ctx.moveTo(p.x, p.y);
+    // Draw a dot on single click
+    ctx.arc(p.x, p.y, brushSize / 2, 0, Math.PI * 2);
+    applyStroke(ctx);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  });
+
+  cv.addEventListener('pointermove', e => {
+    if (!canvasDrawing) return;
+    const p = getPos(e);
+    if (canvasTool === 'eraser') {
+      ctx.clearRect(p.x - brushSize, p.y - brushSize, brushSize * 2, brushSize * 2);
+    } else {
+      ctx.lineTo(p.x, p.y);
+      applyStroke(ctx);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+  });
+
+  cv.addEventListener('pointerup',     () => { canvasDrawing = false; });
+  cv.addEventListener('pointercancel', () => { canvasDrawing = false; });
+
+  // Text tool: click canvas → float an input, commit on Enter/blur
+  cv.addEventListener('click', e => {
+    if (canvasTool !== 'text') return;
+    const panel = document.querySelector('.canvas-panel-inner');
+    const pr    = panel.getBoundingClientRect();
+    const cvr   = cv.getBoundingClientRect();
+
+    const inp = document.getElementById('canvas-text-input');
+    // left/top relative to panel-inner so the input overlays the canvas pixel
+    inp.style.left  = (e.clientX - pr.left) + 'px';
+    inp.style.top   = (e.clientY - pr.top - 10) + 'px';
+    inp.style.color = canvasColor;
+    inp.style.display = 'block';
+    inp.value = '';
+    inp.focus();
+
+    function commitText() {
+      const txt = inp.value.trim();
+      inp.style.display = 'none';
+      if (!txt) return;
+      // Canvas coords = click pos relative to canvas element
+      const tx = e.clientX - cvr.left;
+      const ty = e.clientY - cvr.top;
+      ctx.font      = `${Math.max(14, brushSize * 2.5)}px Nunito, sans-serif`;
+      ctx.fillStyle = canvasColor;
+      ctx.fillText(txt, tx, ty);
+      inp.removeEventListener('blur',    commitText);
+      inp.removeEventListener('keydown', onKey);
+    }
+    function onKey(ke) {
+      if (ke.key === 'Enter')  { ke.preventDefault(); commitText(); }
+      if (ke.key === 'Escape') {
+        inp.style.display = 'none';
+        inp.removeEventListener('blur',    commitText);
+        inp.removeEventListener('keydown', onKey);
+      }
+    }
+    inp.addEventListener('blur',    commitText, { once: true });
+    inp.addEventListener('keydown', onKey);
+  });
+}
+
+function applyStroke(ctx) {
+  ctx.strokeStyle = canvasColor;
+  ctx.lineWidth   = brushSize;
+  ctx.lineCap     = 'round';
+  ctx.lineJoin    = 'round';
+  ctx.stroke();
+}
+
+function setTool(t) {
+  canvasTool = t;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.getElementById('tool-' + t);
+  if (btn) btn.classList.add('active');
+  document.getElementById('drawing-canvas').style.cursor =
+    t === 'eraser' ? 'cell' : t === 'text' ? 'text' : 'crosshair';
+}
+
+function setColor(c) {
+  canvasColor = c;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('selected', s.dataset.color === c));
+  document.getElementById('custom-color').value = c;
+}
+
+function updateBrushSize(v) {
+  brushSize = parseInt(v, 10);
+}
+
+function clearCanvas() {
+  const cv  = document.getElementById('drawing-canvas');
+  const ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, cv.width, cv.height);
+}
+
+
+// ══════════════════════════════════════════════════════════════════
+// LIBRARY FOCUS TIMER
+// ══════════════════════════════════════════════════════════════════
+
+let timerInterval  = null;
+let timerRemaining = 25 * 60; // default 25 min in seconds
+let timerRunning   = false;
+
+function openLibrary() {
+  walkToZone(14, 44, () => {
+    document.getElementById('panel-library').classList.add('open');
+    syncTimerDisplay();
+  });
+}
+function closeLibrary() {
+  document.getElementById('panel-library').classList.remove('open');
+}
+
+function setTimerPreset(minutes) {
+  if (timerRunning) return;
+  timerRemaining = minutes * 60;
+  document.getElementById('t-hours').value   = Math.floor(minutes / 60);
+  document.getElementById('t-minutes').value = minutes % 60;
+  document.getElementById('t-seconds').value = 0;
+  syncTimerDisplay();
+}
+
+function readTimerInputs() {
+  const h = parseInt(document.getElementById('t-hours').value,   10) || 0;
+  const m = parseInt(document.getElementById('t-minutes').value, 10) || 0;
+  const s = parseInt(document.getElementById('t-seconds').value, 10) || 0;
+  return h * 3600 + m * 60 + s;
+}
+
+function syncTimerDisplay() {
+  const disp = document.getElementById('timer-display');
+  const total = timerRunning ? timerRemaining : readTimerInputs();
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  disp.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  disp.classList.toggle('urgent', total <= 60 && timerRunning);
+}
+
+function toggleTimer() {
+  const btn = document.getElementById('timer-start-btn');
+  if (timerRunning) {
+    // Pause
+    clearInterval(timerInterval);
+    timerRunning = false;
+    btn.textContent = '▶ Resume';
+    btn.classList.remove('running');
+    document.getElementById('timer-note').textContent = 'Paused.';
+  } else {
+    // Start / resume
+    if (!timerRunning && !timerInterval) {
+      timerRemaining = readTimerInputs();
+    }
+    if (timerRemaining <= 0) { showToast('Set a time first!'); return; }
+    timerRunning = true;
+    btn.textContent = '⏸ Pause';
+    btn.classList.add('running');
+    document.getElementById('timer-note').textContent = 'Focus. You got this.';
+
+    timerInterval = setInterval(() => {
+      timerRemaining--;
+      syncTimerDisplay();
+      if (timerRemaining <= 0) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerRunning  = false;
+        btn.textContent = '▶ Start';
+        btn.classList.remove('running');
+        document.getElementById('timer-note').textContent = '✅ Session complete!';
+        showToast('Timer finished — great work!');
+      }
+    }, 1000);
+  }
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  timerRunning  = false;
+  const btn = document.getElementById('timer-start-btn');
+  btn.textContent = '▶ Start';
+  btn.classList.remove('running');
+  document.getElementById('t-hours').value   = 0;
+  document.getElementById('t-minutes').value = 25;
+  document.getElementById('t-seconds').value = 0;
+  timerRemaining = 25 * 60;
+  syncTimerDisplay();
+  document.getElementById('timer-note').textContent = '';
 }

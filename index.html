@@ -73,6 +73,25 @@
       <img class="map-frame" id="map-f3" src="img/Boy%20Walking%203.png" alt=""/>
     </div>
 
+    <!-- Clickable zone hotspots overlaid on the map PNG -->
+    <!-- Canvas easel — bottom-left wooden stand -->
+    <button class="map-zone-btn" id="zone-canvas-btn"
+            style="left:10%;top:74%"
+            onclick="openCanvasRoom()"
+            aria-label="Open Blank Canvas">
+      <span class="mzb-dot"></span>
+      <span class="mzb-label">🎨 Canvas</span>
+    </button>
+
+    <!-- Library building — left side, LIBRARY sign -->
+    <button class="map-zone-btn" id="zone-library-btn"
+            style="left:14%;top:44%"
+            onclick="openLibrary()"
+            aria-label="Open Library Timer">
+      <span class="mzb-dot"></span>
+      <span class="mzb-label">📚 Library</span>
+    </button>
+
     <!-- HTML overlay: title + drop button sit above the map -->
     <div id="world-overlay">
       <div id="world-title-block">
@@ -222,13 +241,115 @@
 </div>
 
 
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — BLANK CANVAS (drawing room)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-canvas" role="dialog" aria-modal="true" aria-label="Blank Canvas">
+  <div class="canvas-panel-inner">
+    <div class="canvas-panel-header">
+      <div class="canvas-panel-title">🎨 Blank Canvas</div>
+      <button class="panel-close-btn" onclick="closeCanvasRoom()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="canvas-toolbar" id="canvas-toolbar">
+      <button class="tool-btn active" id="tool-pen"    onclick="setTool('pen')"    title="Pen">✏️</button>
+      <button class="tool-btn"        id="tool-eraser" onclick="setTool('eraser')" title="Eraser">⬜</button>
+      <button class="tool-btn"        id="tool-text"   onclick="setTool('text')"   title="Add text">T</button>
+
+      <div class="toolbar-sep"></div>
+
+      <!-- Brush size -->
+      <input type="range" id="brush-size" min="2" max="40" value="6" title="Brush size"
+             oninput="updateBrushSize(this.value)"/>
+
+      <div class="toolbar-sep"></div>
+
+      <!-- Colour swatches -->
+      <div class="color-swatches" id="color-swatches">
+        <div class="swatch selected" style="--c:#2a1a04" data-color="#2a1a04" onclick="setColor('#2a1a04')"></div>
+        <div class="swatch" style="--c:#e05a2a" data-color="#e05a2a" onclick="setColor('#e05a2a')"></div>
+        <div class="swatch" style="--c:#e8c242" data-color="#e8c242" onclick="setColor('#e8c242')"></div>
+        <div class="swatch" style="--c:#4a9a4a" data-color="#4a9a4a" onclick="setColor('#4a9a4a')"></div>
+        <div class="swatch" style="--c:#4a80c8" data-color="#4a80c8" onclick="setColor('#4a80c8')"></div>
+        <div class="swatch" style="--c:#9a4ac8" data-color="#9a4ac8" onclick="setColor('#9a4ac8')"></div>
+        <div class="swatch" style="--c:#e84a8a" data-color="#e84a8a" onclick="setColor('#e84a8a')"></div>
+        <div class="swatch" style="--c:#f8f0d8" data-color="#f8f0d8" onclick="setColor('#f8f0d8')"></div>
+        <input type="color" id="custom-color" title="Custom colour" value="#2a1a04"
+               oninput="setColor(this.value)" style="width:28px;height:28px;border:none;border-radius:50%;cursor:pointer;padding:0"/>
+      </div>
+
+      <div class="toolbar-sep"></div>
+      <button class="tool-btn tool-clear" onclick="clearCanvas()" title="Clear all">🗑</button>
+    </div>
+
+    <!-- The drawing surface -->
+    <canvas id="drawing-canvas"></canvas>
+
+    <!-- Floating text input (appears on canvas click in text mode) -->
+    <input id="canvas-text-input" type="text" placeholder="Type something…"
+           style="display:none; color:#2a1a04"/>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — LIBRARY TIMER (focus / study room)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-library" role="dialog" aria-modal="true" aria-label="Library Study Timer">
+  <div class="library-panel-inner">
+    <div class="library-panel-header">
+      <div class="library-panel-title">📚 Library</div>
+      <button class="panel-close-btn" onclick="closeLibrary()" aria-label="Close">✕</button>
+    </div>
+
+    <p class="library-subtitle">Set a timer. Work in silence.</p>
+
+    <!-- Clock display -->
+    <div class="timer-display" id="timer-display">00:00:00</div>
+
+    <!-- Preset buttons -->
+    <div class="timer-presets">
+      <button class="preset-btn" onclick="setTimerPreset(25)">25 min</button>
+      <button class="preset-btn" onclick="setTimerPreset(45)">45 min</button>
+      <button class="preset-btn" onclick="setTimerPreset(60)">1 hr</button>
+      <button class="preset-btn" onclick="setTimerPreset(90)">1.5 hr</button>
+    </div>
+
+    <!-- Custom input -->
+    <div class="timer-inputs">
+      <div class="time-input-group">
+        <input type="number" id="t-hours"   min="0" max="23" value="0" placeholder="HH"/>
+        <label>h</label>
+      </div>
+      <div class="time-input-group">
+        <input type="number" id="t-minutes" min="0" max="59" value="25" placeholder="MM"/>
+        <label>m</label>
+      </div>
+      <div class="time-input-group">
+        <input type="number" id="t-seconds" min="0" max="59" value="0" placeholder="SS"/>
+        <label>s</label>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="timer-controls">
+      <button class="timer-btn timer-start"  id="timer-start-btn"  onclick="toggleTimer()">▶ Start</button>
+      <button class="timer-btn timer-reset"  onclick="resetTimer()">↺ Reset</button>
+    </div>
+
+    <p class="timer-note" id="timer-note"></p>
+  </div>
+</div>
+
+
 <!-- Toast notification -->
 <div id="toast" role="status" aria-live="polite"></div>
 
 
 <!-- Ambient audio — loading screen bell -->
 <audio id="ambient-audio" loop preload="auto">
-  <source src="Sound/First Bell Summer.mp3" type="audio/mpeg"/>
+  <source src="Sound/First%20Bell%20Summer.mp3" type="audio/mpeg"/>
 </audio>
 
 <!-- ── Scripts ──────────────────────────────────────────────── -->
