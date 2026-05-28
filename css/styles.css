@@ -950,9 +950,87 @@ html, body {
 }
 
 .noticeboard-pins {
-  display: flex; flex-wrap: wrap; gap: 16px;
-  justify-content: flex-start;
+  columns: 4 140px;
+  column-gap: 14px;
 }
+
+/* Every item in the board breaks cleanly inside columns */
+.noticeboard-pins > * {
+  break-inside: avoid;
+  margin-bottom: 14px;
+}
+
+/* Sticky notes fill the column width (override global 160px) */
+.noticeboard-pins .sticky-note {
+  width: 100%;
+}
+
+/* ── PHOTO TILE — Polaroid style ─────────────────────────────────────────── */
+.nb-photo {
+  background: #fff;
+  border-radius: 4px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 3px 4px 14px rgba(0,0,0,0.32);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.nb-photo:hover {
+  transform: scale(1.05) rotate(0deg) !important;
+  box-shadow: 6px 10px 24px rgba(0,0,0,0.42);
+  z-index: 2;
+}
+.nb-photo::before {
+  content: '';
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  width: 12px; height: 12px;
+  background: radial-gradient(circle at 40% 40%, #ff8888, #cc2222);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  z-index: 1;
+}
+.nb-photo-img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  display: block;
+}
+.nb-photo-caption {
+  padding: 6px 8px 2px;
+  font-size: 0.73rem;
+  color: #2a1a04;
+  font-style: italic;
+  line-height: 1.35;
+}
+.nb-photo-meta {
+  padding: 2px 8px 8px;
+  font-size: 0.65rem;
+  color: #8a7060;
+}
+
+/* ── CAMERA COMPASS — selfie upload UI ──────────────────────────────────── */
+.cam-selfie-divider {
+  text-align: center;
+  color: #5060a0;
+  font-size: 0.8rem;
+  margin: 14px 0 12px;
+  opacity: 0.7;
+  letter-spacing: 0.04em;
+}
+.cam-selfie-row {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  margin-bottom: 10px;
+}
+.cam-selfie-btn { flex-shrink: 0; }
+.cam-preview-wrap { display: none; margin-top: 10px; }
+.cam-preview-wrap.visible { display: block; }
+.cam-preview-img {
+  width: 100%; max-height: 240px;
+  object-fit: cover; border-radius: 10px;
+  display: block; margin-bottom: 8px;
+  border: 1px solid rgba(100,140,255,0.25);
+}
+.cam-pin-btn { width: 100%; margin-top: 4px; }
 
 .sticky-note {
   width: 160px;

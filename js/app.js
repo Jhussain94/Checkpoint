@@ -857,6 +857,67 @@ function submitCameraLink() {
   showToast('📌 Pinned to the Camera Compass!');
 }
 
+// ── SELFIE / PHOTO UPLOAD ─────────────────────────────────────
+let _selfieDataUrl = null;
+
+function compressImage(file) {
+  const maxPx = 900, quality = 0.78;
+  return new Promise(function(resolve) {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = function() {
+      URL.revokeObjectURL(url);
+      const scale  = Math.min(1, maxPx / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width  = Math.round(img.width  * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = url;
+  });
+}
+
+async function handleCameraUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const dataUrl = await compressImage(file);
+  _selfieDataUrl = dataUrl;
+  const preview = document.getElementById('cam-upload-preview');
+  const img     = document.getElementById('cam-preview-img');
+  if (img)     img.src = dataUrl;
+  if (preview) preview.classList.add('visible');
+}
+
+async function submitSelfie() {
+  if (!_selfieDataUrl) return;
+  const caption = (document.getElementById('cam-selfie-caption') || {}).value || '';
+  const drop = {
+    id:        'p' + Date.now(),
+    type:      'photo',
+    content:   _selfieDataUrl,
+    caption:   caption.trim() || null,
+    mood:      'inspired',
+    area:      'corner',
+    timestamp: new Date().toISOString(),
+    username:  'anonymous student',
+    position:  { x: 68 + Math.random() * 22, y: 58 + Math.random() * 22 },
+  };
+  await saveUserDrop(drop);
+  buildNoticeBoardPins();
+  // reset
+  _selfieDataUrl = null;
+  const preview  = document.getElementById('cam-upload-preview');
+  const fileInp  = document.getElementById('cam-file-input');
+  const capInp   = document.getElementById('cam-selfie-caption');
+  if (preview) preview.classList.remove('visible');
+  if (fileInp) fileInp.value = '';
+  if (capInp)  capInp.value  = '';
+  showToast('📸 Photo pinned to the Notice Board!');
+  closeCameraCompass();
+  openNoticeBoard();
+}
+
 
 // ══════════════════════════════════════════════════════════════════
 // NOTICE BOARD
@@ -884,9 +945,18 @@ function buildNoticeBoardPins() {
     return;
   }
   container.innerHTML = drops.map((drop, i) => {
-    const color  = SN_COLORS[i % SN_COLORS.length];
     const rotate = SN_ROTATES[i % SN_ROTATES.length];
 
+    if (drop.type === 'photo') {
+      return `
+        <div class="nb-photo" style="transform:rotate(${rotate}deg)" onclick="openDrop('${drop.id}')">
+          <img class="nb-photo-img" src="${drop.content}" alt="Photo" loading="lazy">
+          ${drop.caption ? `<div class="nb-photo-caption">${drop.caption}</div>` : ''}
+          <div class="nb-photo-meta">${MOOD_ICONS[drop.mood] || '📸'} ${drop.username}</div>
+        </div>`;
+    }
+
+    const color = SN_COLORS[i % SN_COLORS.length];
     let preview;
     if (drop.type === 'song' || drop.type === 'playlist') {
       preview = '🎵 ' + (drop.caption || 'A song drop');
@@ -895,7 +965,6 @@ function buildNoticeBoardPins() {
     } else {
       preview = drop.content.length > 160 ? drop.content.slice(0, 160) + '…' : drop.content;
     }
-
     return `
       <div class="sticky-note ${color}"
            style="transform:rotate(${rotate}deg)"

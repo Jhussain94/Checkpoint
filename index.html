@@ -289,6 +289,23 @@
       <button class="camera-submit-btn" onclick="submitCameraLink()">📌 Pin it</button>
     </div>
 
+    <!-- Upload a selfie / photo -->
+    <div class="cam-selfie-divider">— or upload a photo —</div>
+    <div class="cam-selfie-row">
+      <input type="file" id="cam-file-input" accept="image/*" style="display:none"
+             onchange="handleCameraUpload(this)"/>
+      <button class="camera-submit-btn cam-selfie-btn"
+              onclick="document.getElementById('cam-file-input').click()">📸 Choose Photo</button>
+      <input class="form-input cam-input" id="cam-selfie-caption" type="text"
+             placeholder="Caption (optional)" maxlength="100"/>
+    </div>
+    <div id="cam-upload-preview" class="cam-preview-wrap">
+      <img id="cam-preview-img" class="cam-preview-img" alt="Preview"/>
+      <button class="camera-submit-btn cam-pin-btn" onclick="submitSelfie()">
+        📌 Pin to Notice Board
+      </button>
+    </div>
+
     <!-- Grid of submitted photo links -->
     <div class="camera-grid" id="camera-grid">
       <!-- populated by JS -->
