@@ -166,12 +166,23 @@ let audioStarted = false;
 function startAmbientAudio() {
   const audio = document.getElementById('ambient-audio');
   if (!audio || audioStarted) return;
-  audio.volume = 0.12; // map volume — soft background level
-  audio.play()
-    .then(() => { audioStarted = true; })
-    .catch(() => {
-      // Extremely rare — just silently skip; user can interact again if needed
+  audio.volume = 0.12;
+  const p = audio.play();
+  if (p !== undefined) {
+    p.then(() => {
+      audioStarted = true;
+    }).catch(err => {
+      console.warn('[CHECKPOINT] audio.play() failed:', err.message || err);
+      // Second chance: retry on the very next user interaction
+      function retryOnce() {
+        audio.play().then(() => { audioStarted = true; }).catch(() => {});
+        document.removeEventListener('pointerdown', retryOnce);
+        document.removeEventListener('keydown',     retryOnce);
+      }
+      document.addEventListener('pointerdown', retryOnce, { once: true });
+      document.addEventListener('keydown',     retryOnce, { once: true });
     });
+  }
 }
 
 // ── START BUTTON POSITIONING ──────────────────────────────────
