@@ -360,11 +360,23 @@ function closeZonePanel() {
 }
 
 // ── DROP MODAL ────────────────────────────────────────────────
+let _audioPausedForDrop = false;
+
 function openDrop(dropId) {
   const drops = getDrops();
   const drop  = drops.find(d => d.id === dropId);
   if (!drop) return;
   activeDrop = drop;
+
+  // Pause background music when a video or song drop opens
+  const isMedia = drop.type === 'video' || drop.type === 'song' || drop.type === 'playlist';
+  if (isMedia && !audioMuted) {
+    const ambient = document.getElementById('ambient-audio');
+    if (ambient && !ambient.paused) {
+      ambient.pause();
+      _audioPausedForDrop = true;
+    }
+  }
 
   document.getElementById('drop-found-label').textContent =
     (AREA_ICONS[drop.area] || '📍') + '  Drop Found';
@@ -387,6 +399,13 @@ function openDrop(dropId) {
 function closeDrop() {
   document.getElementById('modal-drop').classList.remove('open');
   activeDrop = null;
+
+  // Resume background music if it was paused for the drop
+  if (_audioPausedForDrop) {
+    _audioPausedForDrop = false;
+    const ambient = document.getElementById('ambient-audio');
+    if (ambient) ambient.play().catch(() => {});
+  }
 }
 
 function renderDropContent(drop) {
