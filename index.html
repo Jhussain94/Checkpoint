@@ -61,16 +61,18 @@
 ────────────────────────────────────────────────────────────────── -->
 <div class="screen" id="screen-world">
 
-  <!-- Game canvas — fills the full screen -->
-  <canvas id="game-canvas"></canvas>
+  <!-- Framed wrapper — same border/shadow as the loading screen -->
+  <div id="world-img-wrap">
+    <img id="map-bg" src="img/page%202/Map%20Page%202.png" alt="Campus map"/>
 
-  <!-- HTML overlay: title + drop button sit above the canvas -->
-  <div id="world-overlay">
-    <div id="world-title-block">
-      <div class="world-title">CHECKPOINT</div>
-      <div class="world-subtitle">A digital archive by Camberwell students</div>
+    <!-- HTML overlay: title + drop button sit above the map -->
+    <div id="world-overlay">
+      <div id="world-title-block">
+        <div class="world-title">CHECKPOINT</div>
+        <div class="world-subtitle">A digital archive by Camberwell students</div>
+      </div>
+      <button id="add-drop-fab" onclick="openLeaveForm()">+ Leave a drop</button>
     </div>
-    <button id="add-drop-fab" onclick="openLeaveForm()">+ Leave a drop</button>
   </div>
 </div>
 

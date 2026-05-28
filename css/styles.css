@@ -230,11 +230,27 @@ html, body {
 /* ─── WORLD SCREEN ───────────────────────────────────────────────────────── */
 #screen-world { overflow: hidden; }
 
-/* Canvas fills the entire screen */
-#game-canvas {
-  position: absolute; inset: 0;
+/* Framed wrapper — mirrors the loading screen border exactly */
+#world-img-wrap {
+  position: absolute;
+  inset: 28px;
+  overflow: hidden;
+  border-radius: 22px;
+  box-shadow: 0 10px 48px rgba(42,26,4,0.30), 0 2px 8px rgba(42,26,4,0.12);
+  background: #f8f7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Map image — fills full width, scales height proportionally, nothing cropped */
+#map-bg {
+  width: 100%;
+  height: auto;
+  max-height: 100%;
   display: block;
-  width: 100%; height: 100%;
+  user-select: none;
+  flex-shrink: 0;
 }
 
 /* HTML overlay on top of canvas: title + FAB */
