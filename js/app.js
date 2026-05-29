@@ -1089,7 +1089,6 @@ let lpItems = [];   // confirmed link/text items waiting to be dropped
 function showLeaveDropPage() {
   lpItems = [];
   renderLpChips();
-  document.getElementById('lp-file').value = '';
   document.getElementById('leave-page-form').style.display = '';
   document.getElementById('leave-page-success').style.display = 'none';
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
@@ -1163,25 +1162,10 @@ function selectLpMood(mood) {
 }
 
 async function submitLeavePageDrop() {
-  const file = document.getElementById('lp-file').files[0];
-
   // Nothing confirmed yet — open the text popup
-  if (!lpItems.length && !file) { openLpTextModal(); return; }
+  if (!lpItems.length) { openLpTextModal(); return; }
 
-  // Build all saves: file first (if any), then confirmed text/link items
   const saves = [];
-
-  if (file) {
-    const isImage = file.type.startsWith('image/');
-    const isAudio = file.type.startsWith('audio/') || /\.mp3$/i.test(file.name);
-    const isVideo = file.type.startsWith('video/');
-    if (isImage) {
-      const dataUrl = await _compressLpImage(file, 900, 0.78);
-      saves.push({ type: 'photo', content: dataUrl });
-    } else if (isAudio || isVideo) {
-      saves.push({ type: isAudio ? 'audio' : 'video', content: URL.createObjectURL(file) });
-    }
-  }
 
   for (const item of lpItems) {
     const url = item.value;
@@ -1197,64 +1181,6 @@ async function submitLeavePageDrop() {
   }
 }
 
-// Drag-and-drop on the cloud icon
-function lpDragOver(event) {
-  event.preventDefault();
-  document.getElementById('lp-drag-zone').classList.add('drag-over');
-}
-function lpDragLeave() {
-  document.getElementById('lp-drag-zone').classList.remove('drag-over');
-}
-async function lpDrop(event) {
-  event.preventDefault();
-  document.getElementById('lp-drag-zone').classList.remove('drag-over');
-  const file = event.dataTransfer.files[0];
-  if (file) await _submitLpFile(file);
-}
-
-// Called when user picks a file from the file picker
-async function onLpFileSelected(input) {
-  const file = input.files[0];
-  if (!file) return;
-  await _submitLpFile(file);
-}
-
-async function _submitLpFile(file) {
-  const isImage = file.type.startsWith('image/');
-  const isAudio = file.type.startsWith('audio/') || /\.mp3$/i.test(file.name);
-  const isVideo = file.type.startsWith('video/');
-
-  if (isImage) {
-    // Compress image to JPEG base64 (same as camera compass)
-    const dataUrl = await _compressLpImage(file, 900, 0.78);
-    await _saveLpDrop('photo', dataUrl);
-  } else if (isAudio || isVideo) {
-    // Create object URL for in-session playback
-    const objUrl = URL.createObjectURL(file);
-    await _saveLpDrop(isAudio ? 'audio' : 'video', objUrl);
-  } else {
-    showToast('Paste a link for that file type 🔗');
-  }
-}
-
-function _compressLpImage(file, maxPx, quality) {
-  return new Promise(resolve => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
-        const canvas = document.createElement('canvas');
-        canvas.width  = Math.round(img.width  * scale);
-        canvas.height = Math.round(img.height * scale);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL('image/jpeg', quality));
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
 
 async function _saveLpDrop(type, content, showSuccess = true) {
   const bounds = { x: [56, 98], y: [56, 86] };
@@ -1436,13 +1362,46 @@ function closeLibrary() {
 }
 
 function showStudyLobby() {
+  fadeOutLoadingAudio();
+  const ambient = document.getElementById('ambient-audio');
+  if (ambient && !ambient.paused) ambient.pause();
+  stopStudyMusic();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-study').classList.add('active');
 }
 function backFromStudy() {
   stopStudyTimer();
+  stopStudyMusic();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-world').classList.add('active');
+  const ambient = document.getElementById('ambient-audio');
+  if (ambient && !audioMuted && audioStarted) ambient.play().catch(() => {});
+}
+
+// ── STUDY MUSIC ───────────────────────────────────────────────
+const STUDY_TRACKS = {
+  'ink-rain':   'img/Study%20Group/Study%20Music/Ink%20Rain%20Lofi.mp3',
+  'petals':     'img/Study%20Group/Study%20Music/Petals%20Lofi.mp3',
+  'tokyo-cafe': 'img/Study%20Group/Study%20Music/Tokyo%20Cafe.mp3',
+};
+
+function playStudyMusic(track) {
+  const audio = document.getElementById('study-audio');
+  if (!audio || !STUDY_TRACKS[track]) return;
+  audio.src = STUDY_TRACKS[track];
+  audio.volume = 0.5;
+  audio.play().catch(() => {});
+  document.querySelectorAll('.study-music-btn').forEach(b => b.classList.remove('active'));
+  const btn = document.querySelector(`.study-music-btn[data-track="${track}"]`);
+  if (btn) btn.classList.add('active');
+}
+
+function stopStudyMusic() {
+  const audio = document.getElementById('study-audio');
+  if (audio) { audio.pause(); audio.currentTime = 0; }
+  document.querySelectorAll('.study-music-btn').forEach(b => b.classList.remove('active'));
+  const offBtn = document.getElementById('study-music-off');
+  if (offBtn) offBtn.classList.add('active');
 }
 
 // ── STUDY TIMER ───────────────────────────────────────────────
