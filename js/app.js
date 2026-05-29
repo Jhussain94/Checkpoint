@@ -1074,9 +1074,6 @@ let lpSelectedMood = '';
 function showLeaveDropPage() {
   // Reset form
   document.getElementById('lp-url').value = '';
-  document.getElementById('lp-msg').value = '';
-  lpSelectedMood = '';
-  document.querySelectorAll('.lp-mood-chip').forEach(c => c.classList.remove('selected'));
   document.getElementById('leave-page-form').style.display = '';
   document.getElementById('leave-page-success').style.display = 'none';
 
@@ -1099,26 +1096,23 @@ function selectLpMood(mood) {
 
 async function submitLeavePageDrop() {
   const url = document.getElementById('lp-url').value.trim();
-  const msg = document.getElementById('lp-msg').value.trim();
 
-  if (!url && !msg) { showToast('Add a link or write something first ✍️'); return; }
+  if (!url) { showToast('Paste a link first ✍️'); return; }
 
-  let type = 'text';
-  let content = msg || url;
-  if (url) {
-    if (url.includes('spotify.com'))                              { type = 'song';  content = toSpotifyEmbed(url); }
-    else if (url.includes('youtube.com') || url.includes('youtu.be')) { type = 'video'; content = toYTEmbed(url); }
-  }
+  let type = 'song';
+  let content = url;
+  if (url.includes('spotify.com'))                                   { type = 'song';  content = toSpotifyEmbed(url); }
+  else if (url.includes('youtube.com') || url.includes('youtu.be')) { type = 'video'; content = toYTEmbed(url); }
 
-  const bounds = { x: [56, 98], y: [56, 86] }; // picnic/corner zone
+  const bounds = { x: [56, 98], y: [56, 86] };
   const rx = bounds.x[0] + Math.random() * (bounds.x[1] - bounds.x[0]);
   const ry = bounds.y[0] + Math.random() * (bounds.y[1] - bounds.y[0]);
 
   const drop = {
     id: 'u' + Date.now(),
     type, content,
-    caption: (msg && url) ? msg : null,
-    mood: lpSelectedMood || 'peaceful',
+    caption: null,
+    mood: 'peaceful',
     area: 'corner',
     timestamp: new Date().toISOString(),
     username: 'anonymous student',
