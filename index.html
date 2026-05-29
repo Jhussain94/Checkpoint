@@ -484,8 +484,12 @@
              style="display:none"
              onchange="onLpFileSelected(this)"/>
 
-      <!-- White rectangle: URL / link input only -->
-      <input id="lp-url" class="lp-input" type="text" aria-label="Link your media"/>
+      <!-- Confirmed item chips — appear above the white rectangle -->
+      <div id="lp-chips"></div>
+
+      <!-- White rectangle: click opens text popup -->
+      <div id="lp-url-hit" onclick="openLpTextModal()" aria-label="Add a link or message"
+           role="button" tabindex="0"></div>
 
       <!-- Green drop it button -->
       <button class="lp-drop-btn" onclick="submitLeavePageDrop()" aria-label="Drop it"></button>
@@ -507,6 +511,20 @@
 
 <!-- Toast notification -->
 <div id="toast" role="status" aria-live="polite"></div>
+
+<!-- ── Leave a Drop — link / text input popup ── -->
+<div id="lp-text-modal" role="dialog" aria-modal="true" aria-label="Add a link or message">
+  <div id="lp-text-panel">
+    <div id="lp-text-title">Paste a link or write something</div>
+    <div id="lp-text-added"></div>
+    <textarea id="lp-text-input" rows="4"
+      placeholder="Spotify, YouTube, a film, a meme, a message... anything"></textarea>
+    <div id="lp-text-actions">
+      <button id="lp-text-cancel"  onclick="cancelLpTextModal()">Cancel</button>
+      <button id="lp-text-confirm" onclick="confirmLpText()">Add</button>
+    </div>
+  </div>
+</div>
 
 
 <!-- Loading screen music -->

@@ -452,7 +452,17 @@ function renderDropContent(drop) {
     return `<iframe src="${drop.content}" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius:14px;display:block"></iframe>`;
   }
   if (drop.type === 'video') {
-    return `<iframe src="${drop.content}" width="100%" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" style="border-radius:14px;display:block;aspect-ratio:16/9;height:auto"></iframe>`;
+    const isEmbed = drop.content.includes('youtube') || drop.content.includes('youtu.be') || drop.content.includes('vimeo.com');
+    if (isEmbed) {
+      const ytId = drop.content.match(/embed\/([^?&/]+)/);
+      const watchUrl = ytId ? `https://www.youtube.com/watch?v=${ytId[1]}` : drop.content;
+      return `<iframe src="${drop.content}" width="100%" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" style="border-radius:14px;display:block;aspect-ratio:16/9;height:auto"></iframe>
+<a href="${watchUrl}" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:0.82rem;color:#8b6014;text-decoration:underline;opacity:0.8">▶ If video doesn't load, watch on YouTube</a>`;
+    }
+    return `<video src="${drop.content}" controls playsinline style="width:100%;border-radius:14px;display:block;aspect-ratio:16/9;background:#000;max-height:65vh"></video>`;
+  }
+  if (drop.type === 'audio') {
+    return `<audio src="${drop.content}" controls style="width:100%;border-radius:14px;display:block;margin:8px 0"></audio>`;
   }
   if (drop.type === 'photo') {
     return `<img src="${drop.content}" alt="" loading="lazy"/>`;
@@ -626,7 +636,7 @@ function toYTEmbed(url) {
   const long  = url.match(/[?&]v=([^&]+)/);
   if (short) id = short[1];
   else if (long) id = long[1];
-  return id ? `https://www.youtube.com/embed/${id}` : url;
+  return id ? `https://www.youtube-nocookie.com/embed/${id}?rel=0` : url;
 }
 
 // ── WIRE EVENTS ───────────────────────────────────────────────
@@ -1052,14 +1062,70 @@ function openLeaveFromPicnic() {
 
 // ── LEAVE A DROP — SCREEN 3 ───────────────────────────────────────────────
 let lpSelectedMood = '';
+let lpItems = [];   // confirmed link/text items waiting to be dropped
 
 function showLeaveDropPage() {
-  document.getElementById('lp-url').value = '';
+  lpItems = [];
+  renderLpChips();
   document.getElementById('lp-file').value = '';
   document.getElementById('leave-page-form').style.display = '';
   document.getElementById('leave-page-success').style.display = 'none';
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-leave-page').classList.add('active');
+}
+
+function _lpChipLabel(val) {
+  const low = val.toLowerCase();
+  if (low.includes('youtube.com') || low.includes('youtu.be')) return '📺 YouTube';
+  if (low.includes('spotify.com'))    return '🎵 Spotify';
+  if (low.includes('soundcloud.com')) return '🎵 SoundCloud';
+  if (low.includes('vimeo.com'))      return '🎬 Vimeo';
+  if (low.includes('instagram.com'))  return '📸 Instagram';
+  if (/^https?:\/\//i.test(val)) {
+    try { return '🔗 ' + new URL(val).hostname.replace('www.', ''); } catch { return '🔗 Link'; }
+  }
+  return val.length > 26 ? val.slice(0, 24) + '…' : val;
+}
+
+function renderLpChips() {
+  const c = document.getElementById('lp-chips');
+  if (!c) return;
+  c.innerHTML = lpItems.map((item, i) => `
+    <div class="lp-chip">
+      <span class="lp-chip-label">${item.label}</span>
+      <button class="lp-chip-remove" onclick="removeLpItem(${i})" aria-label="Remove">×</button>
+    </div>`).join('');
+}
+
+function removeLpItem(i) {
+  lpItems.splice(i, 1);
+  renderLpChips();
+}
+
+function openLpTextModal() {
+  const modal   = document.getElementById('lp-text-modal');
+  const ta      = document.getElementById('lp-text-input');
+  const added   = document.getElementById('lp-text-added');
+  ta.value = '';
+  if (added) {
+    added.innerHTML = lpItems.length
+      ? lpItems.map((it, i) => `<div class="lp-added-row"><span>${it.label}</span><button onclick="removeLpItem(${i});openLpTextModal()" aria-label="Remove">×</button></div>`).join('')
+      : '';
+  }
+  modal.classList.add('open');
+  setTimeout(() => ta.focus(), 120);
+}
+
+function cancelLpTextModal() {
+  document.getElementById('lp-text-modal').classList.remove('open');
+}
+
+function confirmLpText() {
+  const val = document.getElementById('lp-text-input').value.trim();
+  if (!val) { cancelLpTextModal(); return; }
+  lpItems.push({ value: val, label: _lpChipLabel(val) });
+  renderLpChips();
+  document.getElementById('lp-text-modal').classList.remove('open');
 }
 
 function backToMap() {
@@ -1075,28 +1141,38 @@ function selectLpMood(mood) {
 }
 
 async function submitLeavePageDrop() {
-  const url  = document.getElementById('lp-url').value.trim();
   const file = document.getElementById('lp-file').files[0];
 
-  // Nothing typed and no file selected → open file picker
-  if (!url && !file) {
-    document.getElementById('lp-file').click();
-    return;
-  }
+  // Nothing confirmed yet — open the text popup
+  if (!lpItems.length && !file) { openLpTextModal(); return; }
+
+  // Build all saves: file first (if any), then confirmed text/link items
+  const saves = [];
 
   if (file) {
-    await _submitLpFile(file);
-    return;
+    const isImage = file.type.startsWith('image/');
+    const isAudio = file.type.startsWith('audio/') || /\.mp3$/i.test(file.name);
+    const isVideo = file.type.startsWith('video/');
+    if (isImage) {
+      const dataUrl = await _compressLpImage(file, 900, 0.78);
+      saves.push({ type: 'photo', content: dataUrl });
+    } else if (isAudio || isVideo) {
+      saves.push({ type: isAudio ? 'audio' : 'video', content: URL.createObjectURL(file) });
+    }
   }
 
-  // URL path
-  let type = 'text';
-  let content = url;
-  if (url.includes('spotify.com'))                                   { type = 'song';  content = toSpotifyEmbed(url); }
-  else if (url.includes('youtube.com') || url.includes('youtu.be')) { type = 'video'; content = toYTEmbed(url); }
-  else if (/\.(jpe?g|png|gif|webp)$/i.test(url))                    { type = 'photo'; }
+  for (const item of lpItems) {
+    const url = item.value;
+    let type = 'text', content = url;
+    if (url.includes('spotify.com'))                                   { type = 'song';  content = toSpotifyEmbed(url); }
+    else if (url.includes('youtube.com') || url.includes('youtu.be')) { type = 'video'; content = toYTEmbed(url); }
+    else if (/\.(jpe?g|png|gif|webp)$/i.test(url))                    { type = 'photo'; }
+    saves.push({ type, content });
+  }
 
-  await _saveLpDrop(type, content);
+  for (let i = 0; i < saves.length; i++) {
+    await _saveLpDrop(saves[i].type, saves[i].content, i === saves.length - 1);
+  }
 }
 
 // Drag-and-drop on the cloud icon
@@ -1158,7 +1234,7 @@ function _compressLpImage(file, maxPx, quality) {
   });
 }
 
-async function _saveLpDrop(type, content) {
+async function _saveLpDrop(type, content, showSuccess = true) {
   const bounds = { x: [56, 98], y: [56, 86] };
   const rx = bounds.x[0] + Math.random() * (bounds.x[1] - bounds.x[0]);
   const ry = bounds.y[0] + Math.random() * (bounds.y[1] - bounds.y[0]);
@@ -1179,8 +1255,10 @@ async function _saveLpDrop(type, content) {
   buildMeadowCards();
   buildNoticeBoardPins();
 
-  document.getElementById('leave-page-form').style.display = 'none';
-  document.getElementById('leave-page-success').style.display = 'block';
+  if (showSuccess) {
+    document.getElementById('leave-page-form').style.display = 'none';
+    document.getElementById('leave-page-success').style.display = 'block';
+  }
 }
 
 function openCanvasRoom() {
