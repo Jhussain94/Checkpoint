@@ -1440,8 +1440,70 @@ function showStudyLobby() {
   document.getElementById('screen-study').classList.add('active');
 }
 function backFromStudy() {
+  stopStudyTimer();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-world').classList.add('active');
+}
+
+// ── STUDY TIMER ───────────────────────────────────────────────
+let studyTimerInterval = null;
+let studyTimerSeconds  = 0;
+let studySelectedMin   = 0;
+
+function openStudyTimerModal() {
+  studySelectedMin = 0;
+  document.querySelectorAll('.study-dur-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('study-custom-min').value = '';
+  document.getElementById('study-timer-modal').classList.add('open');
+}
+function cancelStudyTimerModal() {
+  document.getElementById('study-timer-modal').classList.remove('open');
+}
+function selectStudyDur(btn) {
+  document.querySelectorAll('.study-dur-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  studySelectedMin = parseInt(btn.dataset.min);
+  document.getElementById('study-custom-min').value = '';
+}
+function confirmStudyTimer() {
+  const custom = parseInt(document.getElementById('study-custom-min').value);
+  const mins   = custom > 0 ? custom : studySelectedMin;
+  if (!mins || mins < 1) { showToast('Pick a duration first ⏱'); return; }
+
+  cancelStudyTimerModal();
+  studyTimerSeconds = mins * 60;
+
+  // Swap start button → countdown display
+  document.getElementById('study-start-btn').style.display   = 'none';
+  document.getElementById('study-timer-display').style.display = 'flex';
+  _tickStudyTimer();
+  if (studyTimerInterval) clearInterval(studyTimerInterval);
+  studyTimerInterval = setInterval(_tickStudyTimer, 1000);
+}
+function _tickStudyTimer() {
+  const m = Math.floor(studyTimerSeconds / 60);
+  const s = studyTimerSeconds % 60;
+  const el = document.getElementById('study-timer-count');
+  if (el) el.textContent = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  if (studyTimerSeconds <= 0) {
+    clearInterval(studyTimerInterval);
+    studyTimerInterval = null;
+    showToast('⏰ Time\'s up! Great work! 🎉');
+    _resetStudyTimer();
+    return;
+  }
+  studyTimerSeconds--;
+}
+function stopStudyTimer() {
+  if (studyTimerInterval) { clearInterval(studyTimerInterval); studyTimerInterval = null; }
+  _resetStudyTimer();
+}
+function _resetStudyTimer() {
+  studyTimerSeconds = 0;
+  document.getElementById('study-start-btn').style.display    = '';
+  document.getElementById('study-timer-display').style.display = 'none';
+  const el = document.getElementById('study-timer-count');
+  if (el) el.textContent = '00:00';
 }
 
 function setTimerPreset(minutes) {

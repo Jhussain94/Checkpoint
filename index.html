@@ -459,8 +459,37 @@
     <img id="study-bg"
          src="img/Study%20Group/Study%20Lobby.png"
          alt="Study Lobby"/>
-    <!-- Transparent back button — overlays the illustrated back text -->
+
+    <!-- Transparent back button over illustrated "< back to map" -->
     <button id="study-back" onclick="backFromStudy()" aria-label="Back to map"></button>
+
+    <!-- Transparent hit-target over the illustrated green "start" button -->
+    <button id="study-start-btn" onclick="openStudyTimerModal()" aria-label="Start timer"></button>
+
+    <!-- Countdown overlay — shown when timer is running -->
+    <div id="study-timer-display">
+      <div id="study-timer-count">00:00</div>
+      <button id="study-timer-stop" onclick="stopStudyTimer()" aria-label="Stop timer">■ Stop</button>
+    </div>
+  </div>
+</div>
+
+<!-- Study timer duration picker modal -->
+<div id="study-timer-modal" role="dialog" aria-modal="true" aria-label="Set study timer">
+  <div id="study-timer-panel">
+    <div id="study-timer-title">⏱ How long will you study?</div>
+    <div id="study-dur-presets">
+      <button class="study-dur-btn" data-min="25"  onclick="selectStudyDur(this)">25 min</button>
+      <button class="study-dur-btn" data-min="45"  onclick="selectStudyDur(this)">45 min</button>
+      <button class="study-dur-btn" data-min="60"  onclick="selectStudyDur(this)">60 min</button>
+      <button class="study-dur-btn" data-min="90"  onclick="selectStudyDur(this)">90 min</button>
+    </div>
+    <input id="study-custom-min" type="number" min="1" max="300"
+           placeholder="Or type a custom time in minutes"/>
+    <div id="study-timer-actions">
+      <button id="study-timer-cancel"  onclick="cancelStudyTimerModal()">Cancel</button>
+      <button id="study-timer-confirm" onclick="confirmStudyTimer()">Start</button>
+    </div>
   </div>
 </div>
 
