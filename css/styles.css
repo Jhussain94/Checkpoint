@@ -1032,6 +1032,34 @@ html, body {
   .loading-track { width: 180px; }
 }
 
+/* ─── YOUTUBE THUMBNAIL PLAYER ──────────────────────────────────────────── */
+.yt-thumb-wrap {
+  position: relative; cursor: pointer;
+  border-radius: 14px; overflow: hidden;
+  aspect-ratio: 16 / 9; background: #000;
+  margin-bottom: 0;
+}
+.yt-thumb-img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+  transition: opacity 0.2s;
+}
+.yt-thumb-wrap:hover .yt-thumb-img { opacity: 0.85; }
+.yt-play-btn {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 3.5rem; color: #fff;
+  background: rgba(0,0,0,0.22);
+  transition: background 0.2s;
+  pointer-events: none;
+}
+.yt-thumb-wrap:hover .yt-play-btn { background: rgba(0,0,0,0.40); }
+.yt-watch-link {
+  display: block; text-align: right; margin-top: 6px;
+  font-size: 0.8rem; color: #8b6014;
+  text-decoration: underline; opacity: 0.75;
+}
+.yt-watch-link:hover { opacity: 1; }
+
 /* ─── LEAVE A DROP — LINK/TEXT POPUP ────────────────────────────────────── */
 #lp-text-modal {
   position: fixed; inset: 0; z-index: 300;

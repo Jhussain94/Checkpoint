@@ -452,12 +452,24 @@ function renderDropContent(drop) {
     return `<iframe src="${drop.content}" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius:14px;display:block"></iframe>`;
   }
   if (drop.type === 'video') {
-    const isEmbed = drop.content.includes('youtube') || drop.content.includes('youtu.be') || drop.content.includes('vimeo.com');
-    if (isEmbed) {
+    const isYT = drop.content.includes('youtube') || drop.content.includes('youtu.be');
+    if (isYT) {
       const ytId = drop.content.match(/embed\/([^?&/]+)/);
-      const watchUrl = ytId ? `https://www.youtube.com/watch?v=${ytId[1]}` : drop.content;
-      return `<iframe src="${drop.content}" width="100%" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" style="border-radius:14px;display:block;aspect-ratio:16/9;height:auto"></iframe>
-<a href="${watchUrl}" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:8px;font-size:0.82rem;color:#8b6014;text-decoration:underline;opacity:0.8">▶ If video doesn't load, watch on YouTube</a>`;
+      if (ytId) {
+        const id  = ytId[1];
+        const src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+        const watchUrl = `https://www.youtube.com/watch?v=${id}`;
+        const thumb = `https://img.youtube.com/vi/${id}/hqdefault.jpg`;
+        return `
+          <div class="yt-thumb-wrap" onclick="playYTEmbed('${id}', this)">
+            <img class="yt-thumb-img" src="${thumb}" alt="Video thumbnail"/>
+            <div class="yt-play-btn">▶</div>
+          </div>
+          <a href="${watchUrl}" target="_blank" rel="noopener" class="yt-watch-link">Open on YouTube ↗</a>`;
+      }
+    }
+    if (drop.content.includes('vimeo.com')) {
+      return `<iframe src="${drop.content}" width="100%" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen style="border-radius:14px;display:block;aspect-ratio:16/9;height:auto"></iframe>`;
     }
     return `<video src="${drop.content}" controls playsinline style="width:100%;border-radius:14px;display:block;aspect-ratio:16/9;background:#000;max-height:65vh"></video>`;
   }
@@ -468,6 +480,14 @@ function renderDropContent(drop) {
     return `<img src="${drop.content}" alt="" loading="lazy"/>`;
   }
   return `<blockquote class="drop-text-body">"${drop.content}"</blockquote>`;
+}
+
+function playYTEmbed(id, wrap) {
+  wrap.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0"
+    width="100%" frameborder="0"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+    allowfullscreen
+    style="border-radius:14px;display:block;aspect-ratio:16/9;height:auto"></iframe>`;
 }
 
 // ── MEADOW PANEL ──────────────────────────────────────────────
