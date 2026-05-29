@@ -807,6 +807,7 @@ html, body {
   width: 33%;
   height: 34%;
   z-index: 20;
+  overflow: hidden;
 }
 
 /* Cloud icon drag/click zone — sits over the illustrated upload cloud */
@@ -832,11 +833,15 @@ html, body {
   background: transparent;
   border: none;
   font-family: 'Nunito', sans-serif;
-  font-size: 0.82rem;
+  font-size: clamp(10px, 1.1vw, 18px);
+  line-height: 1;
   color: #3a2a08;
-  padding: 0 8px;
+  padding: 0 6px;
   outline: none;
   cursor: text;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .lp-input::placeholder { color: transparent; }
 
