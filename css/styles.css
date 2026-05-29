@@ -169,65 +169,19 @@ html, body {
   position: absolute;
   pointer-events: none;
   opacity: 0;
-  width: var(--lsz, 18px);
+  width: var(--lsz, 20px);
   height: auto;
   animation: leafFall var(--ldur, 14s) ease-in 0s 1 forwards;
 }
 @keyframes leafFall {
-  0%   { opacity: 0;    transform: translate(0, 0)                                                               rotate(0deg); }
-  6%   { opacity: 0.85; }
-  90%  { opacity: 0.5;  }
-  100% { opacity: 0;    transform: translate(var(--leaf-dx, 20px), var(--leaf-dy, 220px)) rotate(var(--leaf-rot, 290deg)); }
+  0%   { opacity: 0;   transform: translate(0, 0) rotate(0deg); }
+  6%   { opacity: 0.9; }
+  90%  { opacity: 0.5; }
+  100% { opacity: 0;   transform: translate(var(--leaf-dx, 20px), var(--leaf-dy, 220px)) rotate(var(--leaf-rot, 290deg)); }
 }
 
 /* ── WIND PARTICLES ──────────────────────────────────────────────────────── */
 #wind-particles { position: absolute; inset: 0; pointer-events: none; z-index: 9; overflow: hidden; }
-
-/* ── FALLING LEAVES FROM TREES ───────────────────────────────────────────── */
-#falling-leaves {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 6;
-  overflow: hidden;
-}
-.fall-leaf {
-  position: absolute;
-  pointer-events: none;
-  opacity: 0;
-  width: var(--lsz, 20px);
-  height: auto;
-  animation: leafFall var(--ldur, 14s) ease-in 0s 1 forwards;
-}
-@keyframes leafFall {
-  0%   { opacity: 0;    transform: translate(0, 0) rotate(0deg); }
-  6%   { opacity: 0.9;  }
-  90%  { opacity: 0.5;  }
-  100% { opacity: 0;    transform: translate(var(--leaf-dx, 20px), var(--leaf-dy, 220px)) rotate(var(--leaf-rot, 290deg)); }
-}
-
-/* ── FALLING LEAVES FROM TREES ───────────────────────────────────────────── */
-#falling-leaves {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 6;
-  overflow: hidden;
-}
-.fall-leaf {
-  position: absolute;
-  pointer-events: none;
-  opacity: 0;
-  width: var(--lsz, 20px);
-  height: auto;
-  animation: leafFall var(--ldur, 14s) ease-in 0s 1 forwards;
-}
-@keyframes leafFall {
-  0%   { opacity: 0;    transform: translate(0, 0)                                                                      rotate(0deg);           }
-  6%   { opacity: 0.9;  }
-  90%  { opacity: 0.5;  }
-  100% { opacity: 0;    transform: translate(var(--leaf-dx, 20px), var(--leaf-dy, 220px)) rotate(var(--leaf-rot, 290deg)); }
-}
 
 .wind-leaf {
   position: absolute;
@@ -789,26 +743,34 @@ html, body {
 }
 
 /* ─── LEAVE A DROP — SCREEN 3 ───────────────────────────────────────────── */
-#screen-leave-page { background: var(--sky); }
+/* Screen centres the wrapper — same sky background as other screens */
+#screen-leave-page {
+  background: var(--sky);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-/* Same framed wrapper as arrival + world screens */
+/* Wrapper sized to the image's exact aspect ratio (3508×2480 = ~1.414:1)
+   so there are zero letterbox gaps. max-width/height enforce the 28px margin. */
 #leave-page-wrap {
-  position: absolute;
-  inset: 28px;
+  position: relative;
+  aspect-ratio: 3508 / 2480;
+  max-width:  calc(100vw - 56px);
+  max-height: calc(100vh - 56px);
+  width: 100%;
   overflow: hidden;
   border-radius: 22px;
   box-shadow: 0 10px 48px rgba(42,26,4,0.30), 0 2px 8px rgba(42,26,4,0.12);
-  background: #c8db6a;   /* grass green fills any letterbox gaps */
 }
 
-/* Contain — whole image stays visible, nothing cropped */
+/* Image fills the wrapper exactly — no cropping, no gaps */
 #leave-page-bg {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center;
+  object-fit: fill;
   display: block;
   user-select: none;
   pointer-events: none;
@@ -951,11 +913,11 @@ html, body {
 }
 .lp-success-back:hover, .lp-success-board:hover { background: rgba(70,50,10,1); }
 
-/* Mobile — tighter inset, same radius as arrival mobile */
+/* Mobile — tighter margin */
 @media (max-width: 600px) {
-  #leave-page-wrap  { inset: 6px; border-radius: 12px; }
-  #leave-page-form  { left: 4%; top: 62%; width: 88%; }
-  #leave-page-success { left: 4%; top: 28%; width: 88%; }
+  #leave-page-wrap  { max-width: calc(100vw - 12px); max-height: calc(100vh - 12px); border-radius: 12px; }
+  #leave-page-form  { left: 4%; top: 60%; width: 88%; }
+  #leave-page-success { left: 4%; top: 25%; width: 88%; }
   .lp-mood-chip     { font-size: 0.72rem; padding: 4px 10px; }
 }
 
