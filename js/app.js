@@ -1117,6 +1117,21 @@ async function submitLeavePageDrop() {
   await _saveLpDrop(type, content);
 }
 
+// Drag-and-drop on the cloud icon
+function lpDragOver(event) {
+  event.preventDefault();
+  document.getElementById('lp-drag-zone').classList.add('drag-over');
+}
+function lpDragLeave() {
+  document.getElementById('lp-drag-zone').classList.remove('drag-over');
+}
+async function lpDrop(event) {
+  event.preventDefault();
+  document.getElementById('lp-drag-zone').classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (file) await _submitLpFile(file);
+}
+
 // Called when user picks a file from the file picker
 async function onLpFileSelected(input) {
   const file = input.files[0];

@@ -789,37 +789,54 @@ html, body {
   cursor: pointer;
 }
 
-/* ── Form row — sits over the illustrated input + button on the same line ── */
+/* ── Form container — covers the entire dashed box in the illustration ── */
 #leave-page-form {
   position: absolute;
-  left: 5%;
-  top: 65.5%;
-  width: 30%;
-  height: 5%;
+  left: 4%;
+  top: 56%;
+  width: 33%;
+  height: 34%;
   z-index: 20;
-  display: flex;
-  flex-direction: row;
-  align-items: stretch;
 }
 
-/* Invisible input — covers the white rectangle (left ~74% of the row) */
+/* Cloud icon drag/click zone — sits over the illustrated upload cloud */
+#lp-drag-zone {
+  position: absolute;
+  left: 3%;
+  top: 12%;
+  width: 21%;
+  height: 32%;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+#lp-drag-zone.drag-over { background: rgba(255,255,255,0.35); }
+
+/* URL input — sits exactly inside the white illustrated rectangle */
 .lp-input {
-  flex: 0 0 74%;
+  position: absolute;
+  left: 4%;
+  top: 53%;
+  width: 70%;
+  height: 16%;
   background: transparent;
   border: none;
   font-family: 'Nunito', sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: #3a2a08;
   padding: 0 8px;
   outline: none;
   cursor: text;
-  min-width: 0;
 }
 .lp-input::placeholder { color: transparent; }
 
-/* Invisible hit-target — covers the green "drop it" button (right ~26%) */
+/* Green drop it button hit-target */
 .lp-drop-btn {
-  flex: 0 0 26%;
+  position: absolute;
+  left: 75%;
+  top: 53%;
+  width: 23%;
+  height: 16%;
   background: transparent;
   border: none;
   cursor: pointer;

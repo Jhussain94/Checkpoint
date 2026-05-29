@@ -468,12 +468,31 @@
     <!-- Invisible hit-target over the illustrated "← back to map" text -->
     <button id="leave-page-back" onclick="backToMap()" aria-label="Back to map"></button>
 
-    <!-- Invisible overlays — illustration provides all visual UI -->
+    <!-- Invisible overlays — illustration provides all visual UI.
+         #leave-page-form covers the whole dashed box; children are placed
+         over the exact illustrated elements. -->
     <div id="leave-page-form">
-      <input id="lp-url"  class="lp-input" type="text" aria-label="Link your media"/>
-      <input id="lp-file" type="file" accept="image/*,audio/*,video/*,.mp3,.mp4,.gif"
-             style="display:none" onchange="onLpFileSelected(this)"/>
+
+      <!-- Cloud icon area: click = file picker, drag = drop file -->
+      <div id="lp-drag-zone"
+           onclick="document.getElementById('lp-file').click()"
+           ondragover="lpDragOver(event)"
+           ondragleave="lpDragLeave()"
+           ondrop="lpDrop(event)"
+           aria-label="Upload file"></div>
+
+      <!-- Hidden file input -->
+      <input id="lp-file" type="file"
+             accept="image/*,audio/*,video/*,.mp3,.mp4,.gif"
+             style="display:none"
+             onchange="onLpFileSelected(this)"/>
+
+      <!-- White rectangle: URL / link input only -->
+      <input id="lp-url" class="lp-input" type="text" aria-label="Link your media"/>
+
+      <!-- Green drop it button -->
       <button class="lp-drop-btn" onclick="submitLeavePageDrop()" aria-label="Drop it"></button>
+
     </div>
 
     <!-- Success state — swaps in after submit -->
