@@ -693,7 +693,7 @@ function wireEvents() {
       else if (meadowOpen)  closeMeadow();
       else if (document.getElementById('panel-canvas').classList.contains('open'))       closeCanvasRoom();
       else if (document.getElementById('panel-library').classList.contains('open'))      closeLibrary();
-      else if (document.getElementById('panel-noticeboard').classList.contains('open')) closeNoticeBoard();
+      else if (document.getElementById('screen-noticeboard').classList.contains('active')) closeNoticeBoard();
       else if (document.getElementById('screen-camera').classList.contains('active'))    backFromCamera();
     }
   });
@@ -704,9 +704,6 @@ function wireEvents() {
   });
   document.getElementById('panel-library').addEventListener('click', e => {
     if (e.target.id === 'panel-library') closeLibrary();
-  });
-  document.getElementById('panel-noticeboard').addEventListener('click', e => {
-    if (e.target.id === 'panel-noticeboard') closeNoticeBoard();
   });
 
   buildSparkles();
@@ -758,7 +755,7 @@ function initMapBoy() {
       if (e.target.closest('#world-overlay') ||
           e.target.closest('.map-zone-btn')  ||
           leaveOpen || activeDrop ||
-          document.getElementById('panel-noticeboard').classList.contains('open')) return;
+          document.getElementById('screen-noticeboard').classList.contains('active')) return;
       const rect = wrap.getBoundingClientRect();
       const el   = document.getElementById('map-boy');
       const boyH = el ? (el.offsetHeight / wrap.offsetHeight) * 100 : 24;
@@ -944,29 +941,18 @@ async function ccHandleUpload(input) {
   showToast('📸 Photo added to the campus camera!');
 }
 
-// Per-frame position/size/rotation — measured from the illustration
-const CC_FRAMES = [
-  { left: '37.5%', top: '29%',   w: '19%', h: '23%', rot: -1.5 }, // top-left
-  { left: '57.5%', top: '29%',   w: '19%', h: '23%', rot:  1.0 }, // top-centre
-  { left: '78%',   top: '28.5%', w: '19%', h: '23%', rot: -0.5 }, // top-right
-  { left: '37.5%', top: '55.5%', w: '19%', h: '23%', rot:  1.5 }, // bottom-left
-  { left: '57.5%', top: '55.5%', w: '19%', h: '23%', rot: -1.0 }, // bottom-centre
-  { left: '78%',   top: '55%',   w: '19%', h: '23%', rot:  2.0 }, // bottom-right
-];
-
 function ccBuildGrid() {
   const grid = document.getElementById('cc-grid');
   if (!grid) return;
   const photos = JSON.parse(sessionStorage.getItem('campusPhotos') || '[]');
-  grid.innerHTML = CC_FRAMES.map((f, i) => {
-    const style = `left:${f.left};top:${f.top};width:${f.w};height:${f.h};transform:rotate(${f.rot}deg)`;
-    return photos[i]
-      ? `<div class="cc-frame" style="${style}">
+  grid.innerHTML = Array.from({ length: 6 }, (_, i) =>
+    photos[i]
+      ? `<div class="cc-frame">
            <img src="${photos[i]}" alt="Campus photo">
-           <button class="cc-del" onclick="ccDeletePhoto(${i})" title="Remove">✕</button>
+           <button class="cc-del" onclick="ccDeletePhoto(${i})" title="Remove photo">✕</button>
          </div>`
-      : `<div class="cc-frame cc-empty" style="${style}"></div>`;
-  }).join('');
+      : `<div class="cc-frame cc-empty"></div>`
+  ).join('');
 }
 
 function ccDeletePhoto(i) {
@@ -1084,56 +1070,68 @@ const SN_ROTATES = [-3, -1.5, 0, 1.5, 3, -2.5, 2, -0.5];
 function openNoticeBoard() {
   walkToZone(43, 52, () => {
     buildNoticeBoardPins();
-    document.getElementById('panel-noticeboard').classList.add('open');
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-noticeboard').classList.add('active');
   });
 }
 function closeNoticeBoard() {
-  document.getElementById('panel-noticeboard').classList.remove('open');
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-world').classList.add('active');
   if (activeDrop) closeDrop();
 }
 
 function buildNoticeBoardPins() {
-  const container = document.getElementById('noticeboard-pins');
-  if (!container) return;
-  const drops = getDrops();
-  if (!drops.length) {
-    container.innerHTML = '<p style="color:#a8d8a8;font-style:italic;padding:8px">No drops yet — be the first to leave one.</p>';
-    return;
-  }
-  container.innerHTML = drops.map((drop, i) => {
-    const rotate = SN_ROTATES[i % SN_ROTATES.length];
+  const drops = getDrops().slice(0, 6);  // show the 6 most recent live drops
+
+  for (let i = 0; i < 6; i++) {
+    const slot = document.getElementById('nb-slot-' + i);
+    if (!slot) continue;
+    const drop = drops[i];
+
+    if (!drop) { slot.innerHTML = ''; slot.onclick = null; continue; }
 
     if (drop.type === 'photo') {
-      return `
-        <div class="nb-photo" style="transform:rotate(${rotate}deg)" onclick="openDrop('${drop.id}')">
-          <img class="nb-photo-img" src="${drop.content}" alt="Photo" loading="lazy">
-          ${drop.caption ? `<div class="nb-photo-caption">${drop.caption}</div>` : ''}
-          <div class="nb-photo-meta">${MOOD_ICONS[drop.mood] || '📸'} ${drop.username}</div>
-        </div>`;
+      slot.innerHTML = `<img class="nb-slot-thumb" src="${drop.content}" alt="photo" loading="lazy">`;
+    } else {
+      let icon = '', text = '';
+      if (drop.type === 'song' || drop.type === 'playlist') { icon = '🎵'; text = drop.caption || 'A music drop'; }
+      else if (drop.type === 'tiktok')  { icon = '🎵'; text = drop.caption || 'A TikTok drop'; }
+      else if (drop.type === 'video')   { icon = '🎬'; text = drop.caption || 'A video drop'; }
+      else { text = drop.content.length > 80 ? drop.content.slice(0, 80) + '…' : drop.content; }
+      slot.innerHTML = (icon ? `<div class="nb-slot-icon">${icon}</div>` : '') +
+                       `<div class="nb-slot-text">${text}</div>`;
     }
 
-    const color = SN_COLORS[i % SN_COLORS.length];
-    let preview;
-    if (drop.type === 'song' || drop.type === 'playlist') {
-      preview = '🎵 ' + (drop.caption || 'A song drop');
-    } else if (drop.type === 'tiktok') {
-      preview = '🎵 ' + (drop.caption || 'A TikTok drop');
-    } else if (drop.type === 'video') {
-      preview = '🎬 ' + (drop.caption || 'A video drop');
-    } else {
-      preview = drop.content.length > 160 ? drop.content.slice(0, 160) + '…' : drop.content;
-    }
-    return `
-      <div class="sticky-note ${color}"
-           style="transform:rotate(${rotate}deg)"
-           onclick="openDrop('${drop.id}')">
-        <div class="sn-text">${preview}</div>
-        <div class="sn-footer">
-          <span class="sn-mood">${MOOD_ICONS[drop.mood] || ''} ${drop.mood}</span>
-          <span>${formatDate(drop.timestamp)}</span>
-        </div>
-      </div>`;
-  }).join('');
+    slot.onclick = () => openDrop(drop.id);
+  }
+}
+
+async function submitNoticeBoardNote() {
+  const inp = document.getElementById('nb-note-input');
+  const btn = document.getElementById('nb-post-btn');
+  const text = inp ? inp.value.trim() : '';
+  if (!text) { showToast('Write something first ✏️'); return; }
+
+  // Clear input and disable button immediately so the user sees feedback
+  inp.value = '';
+  if (btn) btn.disabled = true;
+
+  const drop = {
+    id:        'nb' + Date.now(),
+    type:      'text',
+    content:   text,
+    caption:   null,
+    mood:      'peaceful',
+    area:      'corner',
+    timestamp: new Date().toISOString(),
+    username:  'anonymous student',
+    position:  { x: 56 + Math.random() * 40, y: 56 + Math.random() * 28 },
+  };
+
+  await saveUserDrop(drop);   // adds to _cache immediately, then saves to Supabase
+  buildNoticeBoardPins();     // refresh all 6 slots — newest note now in slot 0
+  if (btn) btn.disabled = false;
+  showToast('📌 Note posted to the board!');
 }
 
 // ── Walk the avatar to a map % position, then fire onArrival

@@ -333,18 +333,35 @@
 
 
 <!-- ──────────────────────────────────────────────────────────────
-     PANEL — NOTICE BOARD
+     PANEL — NOTICE BOARD (kept for legacy JS references)
 ────────────────────────────────────────────────────────────────── -->
-<div id="panel-noticeboard" role="dialog" aria-modal="true" aria-label="Notice Board">
-  <div class="noticeboard-inner">
-    <div class="noticeboard-header">
-      <div class="noticeboard-title">📋 Notice Board</div>
-      <button class="panel-close-btn nb-close" onclick="closeNoticeBoard()" aria-label="Close">✕</button>
-    </div>
-    <p class="noticeboard-sub">Notes left behind by students who passed through.</p>
-    <div class="noticeboard-pins" id="noticeboard-pins">
-      <!-- populated by JS -->
-    </div>
+<div id="panel-noticeboard" style="display:none" aria-hidden="true"></div>
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN — NOTICE BOARD
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-noticeboard">
+  <div id="nb-wrap">
+
+    <img id="nb-bg" src="img/Notice%20Board/Notice%20Board.png" alt="Notice Board"/>
+
+    <!-- Back to map -->
+    <button id="nb-back" onclick="closeNoticeBoard()" aria-label="Back to map"></button>
+
+    <!-- 6 sticky-note drop slots (populated by JS) -->
+    <div class="nb-slot" id="nb-slot-0"></div>
+    <div class="nb-slot" id="nb-slot-1"></div>
+    <div class="nb-slot" id="nb-slot-2"></div>
+    <div class="nb-slot" id="nb-slot-3"></div>
+    <div class="nb-slot" id="nb-slot-4"></div>
+    <div class="nb-slot" id="nb-slot-5"></div>
+
+    <!-- Write a note — overlaid on the illustrated card -->
+    <textarea id="nb-note-input"
+              placeholder="Share your thoughts..."></textarea>
+    <button   id="nb-post-btn"
+              onclick="submitNoticeBoardNote()"></button>
+
   </div>
 </div>
 

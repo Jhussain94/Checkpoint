@@ -1155,40 +1155,45 @@ html, body {
   cursor: pointer;   /* pointer ONLY here — nowhere else on the screen */
   z-index: 20;
 }
-/* Full-cover container — individual frames are positioned absolutely inside */
+/* 3×2 grid — calibrated to sit exactly over the illustrated polaroid frames */
 #cc-grid {
   position: absolute;
-  inset: 0;
+  left: 37.5%; top: 29%;
+  width: 61%; height: 50%;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  column-gap: 2.5%;
+  row-gap: 4.5%;
   z-index: 10;
   pointer-events: none;
 }
-/* Each frame is individually positioned + rotated to match the illustration */
 .cc-frame {
-  position: absolute;
-  overflow: hidden;          /* clips the image to the (rotated) frame bounds */
+  position: relative;
+  overflow: hidden;
   pointer-events: all;
-  border-radius: 2px;
 }
-/* Image fills the inner white photo area — offsets match the polaroid border */
+/* Image fills the inner white photo area of each illustrated polaroid.
+   Offsets account for the border: ~11% on sides, ~11% top, ~19% bottom lip. */
 .cc-frame img {
   position: absolute;
   top: 11%; left: 11%;
-  width: 78%; height: 68%;
+  width: 78%; height: 70%;
   object-fit: cover;
   display: block;
   cursor: default;
 }
-/* Delete ✕ — appears top-right of the photo area on hover */
+/* Delete button — sits in the top-right of the photo area */
 .cc-del {
   position: absolute;
   top: 12%; right: 11%;
   width: clamp(14px, 1.5vw, 20px);
   height: clamp(14px, 1.5vw, 20px);
   border-radius: 50%;
-  background: rgba(0,0,0,0.65);
+  background: rgba(0,0,0,0.60);
   color: #fff;
   border: none;
-  font-size: clamp(8px, 0.85vw, 12px);
+  font-size: clamp(8px, 0.9vw, 12px);
   line-height: 1;
   cursor: pointer;
   display: flex; align-items: center; justify-content: center;
@@ -1197,7 +1202,7 @@ html, body {
   z-index: 5;
 }
 .cc-frame:hover .cc-del { opacity: 1; }
-.cc-frame.cc-empty { pointer-events: none; }
+.cc-frame.cc-empty { /* blank — illustrated polaroid frame shows through */ }
 
 /* ─── CANVAS SCREEN ──────────────────────────────────────────────────────── */
 #screen-canvas {
@@ -1573,16 +1578,99 @@ html, body {
 }
 
 
-/* ─── NOTICE BOARD PANEL ─────────────────────────────────────────────────── */
-#panel-noticeboard {
-  position: fixed; inset: 0;
-  background: rgba(20,40,20,0.65);
+/* ─── NOTICE BOARD SCREEN ────────────────────────────────────────────────── */
+#screen-noticeboard {
+  background: #3a5c3a;
   display: flex; align-items: center; justify-content: center;
-  z-index: 90;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.35s ease;
 }
-#panel-noticeboard.open { opacity: 1; pointer-events: all; }
+#nb-wrap {
+  position: relative;
+  aspect-ratio: 1008 / 720;
+  width: min(calc(100vw - 56px), calc((100vh - 48px) * 1008 / 720));
+  height: auto;
+  overflow: hidden;
+  border-radius: 22px;
+  box-shadow: 0 10px 48px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.15);
+}
+#nb-bg {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: fill; display: block;
+}
+#nb-back {
+  position: absolute;
+  top: 3%; left: 2%;
+  width: 19%; height: 5%;
+  background: transparent; border: none; cursor: pointer; z-index: 20;
+}
+
+/* ── 6 sticky-note drop slots ── */
+/* Positions measured from the illustration (1008×720) */
+.nb-slot {
+  position: absolute;
+  overflow: hidden;
+  z-index: 10;
+  cursor: pointer;
+  padding: 10% 8% 8%;        /* inset from the illustrated note edges */
+  box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 4%;
+}
+.nb-slot:empty { pointer-events: none; }
+
+/* Row 1 */
+#nb-slot-0 { left: 34%;   top: 29%; width: 15%; height: 23%; }
+#nb-slot-1 { left: 51%;   top: 26%; width: 16%; height: 24%; }
+#nb-slot-2 { left: 69%;   top: 27%; width: 15%; height: 23%; }
+/* Row 2 */
+#nb-slot-3 { left: 34%;   top: 57%; width: 15%; height: 22%; }
+#nb-slot-4 { left: 51%;   top: 55%; width: 16%; height: 23%; }
+#nb-slot-5 { left: 69%;   top: 54%; width: 15%; height: 23%; }
+
+.nb-slot-thumb {
+  width: 100%; flex: 1;
+  object-fit: cover; display: block; border-radius: 2px;
+}
+.nb-slot-text {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(7px, 0.78vw, 11px);
+  color: #2a1a04;
+  line-height: 1.35;
+  word-break: break-word;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+.nb-slot-icon {
+  font-size: clamp(14px, 1.8vw, 24px);
+  text-align: center;
+}
+
+/* ── Write-a-note: sits exactly over the illustrated white box ── */
+#nb-note-input {
+  position: absolute;
+  left: 5.7%; top: 65%;
+  width: 23.5%; height: 19%;
+  background: transparent;
+  border: none; outline: none; resize: none;
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(8px, 0.92vw, 12px);
+  color: #2a1a04;
+  line-height: 1.5;
+  padding: 5px 8px;
+  box-sizing: border-box;
+  z-index: 20;
+  overflow: hidden;          /* text never escapes the white box boundary */
+  display: block;
+}
+#nb-note-input::placeholder { color: rgba(42,26,4,0.32); }
+/* ── Post button: over the illustrated green "post anonymously" pill ── */
+#nb-post-btn {
+  position: absolute;
+  left: 6.5%; top: 85.5%;
+  width: 22%; height: 5%;
+  background: transparent; border: none; cursor: pointer; z-index: 20;
+}
 
 .noticeboard-inner {
   background: #2d5a2a;
