@@ -42,27 +42,32 @@ html, body {
 
 /* ─── ARRIVAL SCREEN (loading + start merged) ───────────────────────────── */
 #screen-arrival {
-  background: #f8f7d0; /* sky colour fills letterbox gaps */
+  background: #f8f7d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/* Framed wrapper — sits inside the viewport with margins and rounded corners */
+/* Aspect-ratio locked wrapper — same A4 ratio as the illustration (3508×2480).
+   max-width/height enforce the 28 px margin on all sides. No stretch ever. */
 #arrival-img-wrap {
-  position: absolute;
-  inset: 28px;
+  position: relative;
+  aspect-ratio: 3508 / 2480;
+  max-width:  calc(100vw - 56px);
+  max-height: calc(100vh - 56px);
+  width: 100%;
   overflow: hidden;
   border-radius: 22px;
   box-shadow: 0 10px 48px rgba(42,26,4,0.30), 0 2px 8px rgba(42,26,4,0.12);
 }
 
-/* Image fills the entire viewport — CSS handles the scaling, JS only
-   handles the invisible button overlay on top of the painted START button */
+/* Image fills the wrapper exactly — wrapper ratio matches image ratio */
 #arrival-scene {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center;
+  object-fit: fill;
   display: block;
   user-select: none;
   pointer-events: none;
@@ -252,19 +257,23 @@ html, body {
 }
 
 /* ─── WORLD SCREEN ───────────────────────────────────────────────────────── */
-#screen-world { overflow: hidden; }
+#screen-world {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 
-/* Framed wrapper — mirrors the loading screen border exactly */
+/* Same aspect-ratio lock as arrival and leave-drop — no stretch ever */
 #world-img-wrap {
-  position: absolute;
-  inset: 28px;
+  position: relative;
+  aspect-ratio: 3508 / 2480;
+  max-width:  calc(100vw - 56px);
+  max-height: calc(100vh - 56px);
+  width: 100%;
   overflow: hidden;
   border-radius: 22px;
   box-shadow: 0 10px 48px rgba(42,26,4,0.30), 0 2px 8px rgba(42,26,4,0.12);
   background: #f8f7d0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 /* ── MAP AVATAR ──────────────────────────────────────────────────────────── */
@@ -287,14 +296,15 @@ html, body {
 #map-f2 {             transform: translateX(-21%); }
 #map-f3 {             transform: translateX(-71%); }
 
-/* Map image — fills full width, scales height proportionally, nothing cropped */
+/* Map image fills the wrapper exactly — no stretch, wrapper ratio matches */
 #map-bg {
+  position: absolute;
+  inset: 0;
   width: 100%;
-  height: auto;
-  max-height: 100%;
+  height: 100%;
+  object-fit: fill;
   display: block;
   user-select: none;
-  flex-shrink: 0;
 }
 
 /* HTML overlay on top of canvas: title + FAB */
@@ -895,41 +905,21 @@ html, body {
 /* ─── RESPONSIVE ─────────────────────────────────────────────────────────── */
 @media (max-width: 600px) {
 
-  /* ── Arrival screen — tighter inset ── */
+  /* ── Arrival screen — smaller margin on mobile ── */
   #arrival-img-wrap {
-    inset: 6px;
+    max-width:  calc(100vw - 12px);
+    max-height: calc(100vh - 12px);
     border-radius: 12px;
   }
 
-  /* ── World screen — scrolls vertically so the full landscape map fits ── */
-  #screen-world {
-    overflow-y: auto;
-    overflow-x: hidden;
-  }
-
-  /* Map container switches from fixed-inset box to natural-height block.
-     This makes zone button % positions match the image correctly on mobile. */
+  /* ── World screen — same flex-centre as desktop, just smaller margin ── */
   #world-img-wrap {
-    position: relative !important;
-    inset: auto !important;
-    width: calc(100% - 12px);
-    margin: 52px auto 0;   /* top margin leaves room for the fixed overlay */
-    height: auto !important;
-    border-radius: 12px;
-    display: block;
-    overflow: visible;
-    box-shadow: 0 6px 28px rgba(42,26,4,0.22);
-  }
-
-  #map-bg {
-    width: 100%;
-    height: auto;
-    max-height: none;
-    display: block;
+    max-width:  calc(100vw - 12px);
+    max-height: calc(100vh - 12px);
     border-radius: 12px;
   }
 
-  /* Overlay stays pinned at top while map scrolls beneath it */
+  /* Overlay stays pinned at top */
   #world-overlay {
     position: fixed !important;
     top: 0; left: 0; right: 0; bottom: auto;
