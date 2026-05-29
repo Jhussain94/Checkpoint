@@ -465,15 +465,21 @@
          src="img/Leave%20a%20Drop/Leave%20a%20Drop%20(2).png"
          alt="Leave a drop"/>
 
-    <!-- Back to map — sits over the painted text top-left -->
+    <!-- Back to map — visible button top-left -->
     <button id="leave-page-back" onclick="backToMap()">← back to map</button>
 
     <!-- Form overlaid on the illustrated input box (bottom-left area) -->
     <div id="leave-page-form">
-      <input  class="lp-input" id="lp-url" type="url"
-              placeholder="link your song, video, playlist…"/>
+
+      <label class="lp-label" for="lp-url">📎 link your media</label>
+      <input class="lp-input" id="lp-url" type="url"
+             placeholder="song · video · playlist · anything"/>
+
+      <label class="lp-label" for="lp-msg">✏️ or write something</label>
       <textarea class="lp-input lp-textarea" id="lp-msg" maxlength="200"
-                placeholder="or write something…"></textarea>
+                placeholder="a thought, a memory, a feeling…"></textarea>
+
+      <label class="lp-label">your mood</label>
       <div class="lp-mood-row">
         <button class="lp-mood-chip" data-mood="hopeful"     onclick="selectLpMood('hopeful')">✨ hopeful</button>
         <button class="lp-mood-chip" data-mood="inspired"    onclick="selectLpMood('inspired')">🔥 inspired</button>
@@ -483,6 +489,7 @@
         <button class="lp-mood-chip" data-mood="overwhelmed" onclick="selectLpMood('overwhelmed')">🌀 overwhelmed</button>
         <button class="lp-mood-chip" data-mood="lonely"      onclick="selectLpMood('lonely')">🌙 lonely</button>
       </div>
+
       <button class="lp-drop-btn" onclick="submitLeavePageDrop()">drop it →</button>
     </div>
 
