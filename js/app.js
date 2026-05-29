@@ -1065,7 +1065,73 @@ function walkToZone(xPct, yPct, onArrival) {
 }
 
 function openLeaveFromPicnic() {
-  walkToZone(74, 26, () => openLeaveForm());
+  walkToZone(82, 31, () => showLeaveDropPage());
+}
+
+// ── LEAVE A DROP — SCREEN 3 ───────────────────────────────────────────────
+let lpSelectedMood = '';
+
+function showLeaveDropPage() {
+  // Reset form
+  document.getElementById('lp-url').value = '';
+  document.getElementById('lp-msg').value = '';
+  lpSelectedMood = '';
+  document.querySelectorAll('.lp-mood-chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('leave-page-form').style.display = '';
+  document.getElementById('leave-page-success').style.display = 'none';
+
+  // Switch to screen 3
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-leave-page').classList.add('active');
+}
+
+function backToMap() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-world').classList.add('active');
+}
+
+function selectLpMood(mood) {
+  lpSelectedMood = mood;
+  document.querySelectorAll('.lp-mood-chip').forEach(c => {
+    c.classList.toggle('selected', c.dataset.mood === mood);
+  });
+}
+
+async function submitLeavePageDrop() {
+  const url = document.getElementById('lp-url').value.trim();
+  const msg = document.getElementById('lp-msg').value.trim();
+
+  if (!url && !msg) { showToast('Add a link or write something first ✍️'); return; }
+
+  let type = 'text';
+  let content = msg || url;
+  if (url) {
+    if (url.includes('spotify.com'))                              { type = 'song';  content = toSpotifyEmbed(url); }
+    else if (url.includes('youtube.com') || url.includes('youtu.be')) { type = 'video'; content = toYTEmbed(url); }
+  }
+
+  const bounds = { x: [56, 98], y: [56, 86] }; // picnic/corner zone
+  const rx = bounds.x[0] + Math.random() * (bounds.x[1] - bounds.x[0]);
+  const ry = bounds.y[0] + Math.random() * (bounds.y[1] - bounds.y[0]);
+
+  const drop = {
+    id: 'u' + Date.now(),
+    type, content,
+    caption: (msg && url) ? msg : null,
+    mood: lpSelectedMood || 'peaceful',
+    area: 'corner',
+    timestamp: new Date().toISOString(),
+    username: 'anonymous student',
+    position: { x: parseFloat(rx.toFixed(1)), y: parseFloat(ry.toFixed(1)) }
+  };
+
+  await saveUserDrop(drop);
+  renderCheckpoints();
+  buildMeadowCards();
+  buildNoticeBoardPins();
+
+  document.getElementById('leave-page-form').style.display = 'none';
+  document.getElementById('leave-page-success').style.display = 'block';
 }
 
 function openCanvasRoom() {
