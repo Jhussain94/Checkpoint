@@ -402,7 +402,7 @@ function openDrop(dropId) {
   activeDrop = drop;
 
   // Pause background music when a video or song drop opens
-  const isMedia = drop.type === 'video' || drop.type === 'song' || drop.type === 'playlist';
+  const isMedia = drop.type === 'video' || drop.type === 'song' || drop.type === 'playlist' || drop.type === 'tiktok';
   if (isMedia && !audioMuted) {
     const ambient = document.getElementById('ambient-audio');
     if (ambient && !ambient.paused) {
@@ -448,6 +448,9 @@ function closeDrop() {
 }
 
 function renderDropContent(drop) {
+  if (drop.type === 'tiktok') {
+    return `<iframe src="${drop.content}" style="border-radius:14px;display:block;width:100%;max-width:340px;height:700px;margin:0 auto" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+  }
   if (drop.type === 'song' || drop.type === 'playlist') {
     return `<iframe src="${drop.content}" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius:14px;display:block"></iframe>`;
   }
@@ -478,6 +481,9 @@ function renderDropContent(drop) {
   }
   if (drop.type === 'photo') {
     return `<img src="${drop.content}" alt="" loading="lazy"/>`;
+  }
+  if (/^https?:\/\//i.test(drop.content)) {
+    return `<div class="drop-link-wrap"><a href="${drop.content}" target="_blank" rel="noopener noreferrer" class="drop-link">${drop.content}</a></div>`;
   }
   return `<blockquote class="drop-text-body">"${drop.content}"</blockquote>`;
 }
@@ -644,6 +650,11 @@ async function submitDrop() {
 }
 
 // ── EMBED HELPERS ─────────────────────────────────────────────
+function toTikTokEmbed(url) {
+  const match = url.match(/tiktok\.com\/@[^/]+\/video\/(\d+)/);
+  if (match) return `https://www.tiktok.com/embed/v2/${match[1]}`;
+  return url;
+}
 function toSpotifyEmbed(url) {
   // https://open.spotify.com/track/ID → embed URL
   const match = url.match(/spotify\.com\/(track|playlist|album)\/([A-Za-z0-9]+)/);
@@ -683,7 +694,7 @@ function wireEvents() {
       else if (document.getElementById('panel-canvas').classList.contains('open'))       closeCanvasRoom();
       else if (document.getElementById('panel-library').classList.contains('open'))      closeLibrary();
       else if (document.getElementById('panel-noticeboard').classList.contains('open')) closeNoticeBoard();
-      else if (document.getElementById('panel-camera').classList.contains('open'))      closeCameraCompass();
+      else if (document.getElementById('screen-camera').classList.contains('active'))    backFromCamera();
     }
   });
 
@@ -696,9 +707,6 @@ function wireEvents() {
   });
   document.getElementById('panel-noticeboard').addEventListener('click', e => {
     if (e.target.id === 'panel-noticeboard') closeNoticeBoard();
-  });
-  document.getElementById('panel-camera').addEventListener('click', e => {
-    if (e.target.id === 'panel-camera') closeCameraCompass();
   });
 
   buildSparkles();
@@ -902,13 +910,70 @@ function saveCameraLink(entry) {
 }
 
 function openCameraCompass() {
-  walkToZone(50, 28, () => {
-    buildCameraGrid();
-    document.getElementById('panel-camera').classList.add('open');
-  });
+  walkToZone(50, 28, () => showCameraScreen());
 }
 function closeCameraCompass() {
-  document.getElementById('panel-camera').classList.remove('open');
+  backFromCamera();
+}
+
+function showCameraScreen() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-camera').classList.add('active');
+  ccBuildGrid();
+}
+
+function backFromCamera() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-world').classList.add('active');
+}
+
+function ccTriggerUpload() {
+  document.getElementById('cc-file-input').click();
+}
+
+async function ccHandleUpload(input) {
+  const file = input.files[0];
+  if (!file) return;
+  showToast('Uploading…');
+  const dataUrl = await compressImage(file);
+  const photos  = JSON.parse(sessionStorage.getItem('campusPhotos') || '[]');
+  photos.unshift(dataUrl);
+  sessionStorage.setItem('campusPhotos', JSON.stringify(photos.slice(0, 12)));
+  input.value = '';
+  ccBuildGrid();
+  showToast('📸 Photo added to the campus camera!');
+}
+
+// Per-frame position/size/rotation — measured from the illustration
+const CC_FRAMES = [
+  { left: '37.5%', top: '29%',   w: '19%', h: '23%', rot: -1.5 }, // top-left
+  { left: '57.5%', top: '29%',   w: '19%', h: '23%', rot:  1.0 }, // top-centre
+  { left: '78%',   top: '28.5%', w: '19%', h: '23%', rot: -0.5 }, // top-right
+  { left: '37.5%', top: '55.5%', w: '19%', h: '23%', rot:  1.5 }, // bottom-left
+  { left: '57.5%', top: '55.5%', w: '19%', h: '23%', rot: -1.0 }, // bottom-centre
+  { left: '78%',   top: '55%',   w: '19%', h: '23%', rot:  2.0 }, // bottom-right
+];
+
+function ccBuildGrid() {
+  const grid = document.getElementById('cc-grid');
+  if (!grid) return;
+  const photos = JSON.parse(sessionStorage.getItem('campusPhotos') || '[]');
+  grid.innerHTML = CC_FRAMES.map((f, i) => {
+    const style = `left:${f.left};top:${f.top};width:${f.w};height:${f.h};transform:rotate(${f.rot}deg)`;
+    return photos[i]
+      ? `<div class="cc-frame" style="${style}">
+           <img src="${photos[i]}" alt="Campus photo">
+           <button class="cc-del" onclick="ccDeletePhoto(${i})" title="Remove">✕</button>
+         </div>`
+      : `<div class="cc-frame cc-empty" style="${style}"></div>`;
+  }).join('');
+}
+
+function ccDeletePhoto(i) {
+  const photos = JSON.parse(sessionStorage.getItem('campusPhotos') || '[]');
+  photos.splice(i, 1);
+  sessionStorage.setItem('campusPhotos', JSON.stringify(photos));
+  ccBuildGrid();
 }
 
 function buildCameraGrid() {
@@ -1051,6 +1116,8 @@ function buildNoticeBoardPins() {
     let preview;
     if (drop.type === 'song' || drop.type === 'playlist') {
       preview = '🎵 ' + (drop.caption || 'A song drop');
+    } else if (drop.type === 'tiktok') {
+      preview = '🎵 ' + (drop.caption || 'A TikTok drop');
     } else if (drop.type === 'video') {
       preview = '🎬 ' + (drop.caption || 'A video drop');
     } else {
@@ -1084,69 +1151,14 @@ function openLeaveFromPicnic() {
 
 // ── LEAVE A DROP — SCREEN 3 ───────────────────────────────────────────────
 let lpSelectedMood = '';
-let lpItems = [];   // confirmed link/text items waiting to be dropped
 
 function showLeaveDropPage() {
-  lpItems = [];
-  renderLpChips();
+  const inp = document.getElementById('lp-url-input');
+  if (inp) inp.value = '';
   document.getElementById('leave-page-form').style.display = '';
   document.getElementById('leave-page-success').style.display = 'none';
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-leave-page').classList.add('active');
-}
-
-function _lpChipLabel(val) {
-  const low = val.toLowerCase();
-  if (low.includes('youtube.com') || low.includes('youtu.be')) return '📺 YouTube';
-  if (low.includes('spotify.com'))    return '🎵 Spotify';
-  if (low.includes('soundcloud.com')) return '🎵 SoundCloud';
-  if (low.includes('vimeo.com'))      return '🎬 Vimeo';
-  if (low.includes('instagram.com'))  return '📸 Instagram';
-  if (/^https?:\/\//i.test(val)) {
-    try { return '🔗 ' + new URL(val).hostname.replace('www.', ''); } catch { return '🔗 Link'; }
-  }
-  return val.length > 26 ? val.slice(0, 24) + '…' : val;
-}
-
-function renderLpChips() {
-  const c = document.getElementById('lp-chips');
-  if (!c) return;
-  c.innerHTML = lpItems.map((item, i) => `
-    <div class="lp-chip">
-      <span class="lp-chip-label">${item.label}</span>
-      <button class="lp-chip-remove" onclick="removeLpItem(${i})" aria-label="Remove">×</button>
-    </div>`).join('');
-}
-
-function removeLpItem(i) {
-  lpItems.splice(i, 1);
-  renderLpChips();
-}
-
-function openLpTextModal() {
-  const modal   = document.getElementById('lp-text-modal');
-  const ta      = document.getElementById('lp-text-input');
-  const added   = document.getElementById('lp-text-added');
-  ta.value = '';
-  if (added) {
-    added.innerHTML = lpItems.length
-      ? lpItems.map((it, i) => `<div class="lp-added-row"><span>${it.label}</span><button onclick="removeLpItem(${i});openLpTextModal()" aria-label="Remove">×</button></div>`).join('')
-      : '';
-  }
-  modal.classList.add('open');
-  setTimeout(() => ta.focus(), 120);
-}
-
-function cancelLpTextModal() {
-  document.getElementById('lp-text-modal').classList.remove('open');
-}
-
-function confirmLpText() {
-  const val = document.getElementById('lp-text-input').value.trim();
-  if (!val) { cancelLpTextModal(); return; }
-  lpItems.push({ value: val, label: _lpChipLabel(val) });
-  renderLpChips();
-  document.getElementById('lp-text-modal').classList.remove('open');
 }
 
 function backToMap() {
@@ -1162,23 +1174,16 @@ function selectLpMood(mood) {
 }
 
 async function submitLeavePageDrop() {
-  // Nothing confirmed yet — open the text popup
-  if (!lpItems.length) { openLpTextModal(); return; }
+  const raw = (document.getElementById('lp-url-input').value || '').trim();
+  if (!raw) { showToast('Paste a link first 🔗'); return; }
 
-  const saves = [];
+  let type = 'text', content = raw;
+  if (raw.includes('tiktok.com'))                                   { type = 'tiktok'; content = toTikTokEmbed(raw); }
+  else if (raw.includes('spotify.com'))                             { type = 'song';   content = toSpotifyEmbed(raw); }
+  else if (raw.includes('youtube.com') || raw.includes('youtu.be')){ type = 'video';  content = toYTEmbed(raw); }
+  else if (/\.(jpe?g|png|gif|webp)$/i.test(raw))                   { type = 'photo'; }
 
-  for (const item of lpItems) {
-    const url = item.value;
-    let type = 'text', content = url;
-    if (url.includes('spotify.com'))                                   { type = 'song';  content = toSpotifyEmbed(url); }
-    else if (url.includes('youtube.com') || url.includes('youtu.be')) { type = 'video'; content = toYTEmbed(url); }
-    else if (/\.(jpe?g|png|gif|webp)$/i.test(url))                    { type = 'photo'; }
-    saves.push({ type, content });
-  }
-
-  for (let i = 0; i < saves.length; i++) {
-    await _saveLpDrop(saves[i].type, saves[i].content, i === saves.length - 1);
-  }
+  await _saveLpDrop(type, content);
 }
 
 
@@ -1210,139 +1215,366 @@ async function _saveLpDrop(type, content, showSuccess = true) {
 }
 
 function openCanvasRoom() {
-  walkToZone(10, 74, () => {
-    document.getElementById('panel-canvas').classList.add('open');
-    if (!canvasReady) initDrawingCanvas();
-  });
+  walkToZone(10, 74, () => showCanvasScreen());
 }
-function closeCanvasRoom() {
-  document.getElementById('panel-canvas').classList.remove('open');
+
+function showCanvasScreen() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-canvas').classList.add('active');
+  setTimeout(initDrawingCanvas, 80);
 }
+
+function backFromCanvas() {
+  cvCancelImage();
+  cvCancelTextbox();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-world').classList.add('active');
+}
+
+// ── CANVAS DRAWING ────────────────────────────────────────────
+let cvReady  = false;
+let cvTool   = 'pencil';
+let cvColor  = '#222222';
+let cvSize   = 4;
+let cvActive = false;
+let cvLastX  = 0, cvLastY = 0;
+let cvMidX   = 0, cvMidY  = 0;
+
+// Per-tool rendering properties
+const CV_PROPS = {
+  pencil:     { alpha: 0.65, sizeM: 0.8,  cap: 'round',  eraser: false },
+  pen:        { alpha: 1.0,  sizeM: 1.0,  cap: 'round',  eraser: false },
+  brush:      { alpha: 0.80, sizeM: 2.8,  cap: 'round',  eraser: false },
+  marker:     { alpha: 0.55, sizeM: 5.0,  cap: 'square', eraser: false },
+  highlighter:{ alpha: 0.22, sizeM: 9.0,  cap: 'square', eraser: false },
+  eraser:     { alpha: 1.0,  sizeM: 4.0,  cap: 'round',  eraser: true  },
+};
 
 function initDrawingCanvas() {
-  canvasReady = true;
-  const cv  = document.getElementById('drawing-canvas');
+  const cv   = document.getElementById('cv-canvas');
+  const wrap = document.getElementById('cv-wrap');
+  const tb   = document.getElementById('cv-toolbar');
+
+  if (!wrap.clientWidth || !wrap.clientHeight) { setTimeout(initDrawingCanvas, 30); return; }
+
+  // Simple 1:1 CSS-pixel canvas — no DPR scaling needed
+  cv.width  = wrap.clientWidth;
+  cv.height = wrap.clientHeight - tb.offsetHeight;
+
   const ctx = cv.getContext('2d');
+  ctx.fillStyle = '#fafaf8';
+  ctx.fillRect(0, 0, cv.width, cv.height);
 
-  function resize() {
-    const dpr = window.devicePixelRatio || 1;
-    const w = cv.clientWidth, h = cv.clientHeight;
-    cv.width  = w * dpr;
-    cv.height = h * dpr;
-    ctx.scale(dpr, dpr);
-  }
-  resize();
-  window.addEventListener('resize', resize);
+  if (cvReady) return;
+  cvReady = true;
 
-  function getPos(e) {
-    const r = cv.getBoundingClientRect();
-    const src = e.touches ? e.touches[0] : e;
-    return { x: src.clientX - r.left, y: src.clientY - r.top };
-  }
+  cv.addEventListener('pointerdown', cvDown);
+  cv.addEventListener('pointermove', cvMove);
+  cv.addEventListener('pointerup',   cvUp);
+  cv.addEventListener('pointerleave',cvUp);
+  cv.addEventListener('touchstart',  e => e.preventDefault(), { passive: false });
+  cv.addEventListener('click',       cvCanvasClick);
+  cv.addEventListener('dragover',    e => e.preventDefault());
+  cv.addEventListener('drop',        cvDropImage);
 
-  cv.addEventListener('pointerdown', e => {
-    if (canvasTool === 'text') return; // handled separately
-    canvasDrawing = true;
-    cv.setPointerCapture(e.pointerId);
-    ctx.beginPath();
-    const p = getPos(e);
-    ctx.moveTo(p.x, p.y);
-    // Draw a dot on single click
-    ctx.arc(p.x, p.y, brushSize / 2, 0, Math.PI * 2);
-    applyStroke(ctx);
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-  });
-
-  cv.addEventListener('pointermove', e => {
-    if (!canvasDrawing) return;
-    const p = getPos(e);
-    if (canvasTool === 'eraser') {
-      ctx.clearRect(p.x - brushSize, p.y - brushSize, brushSize * 2, brushSize * 2);
-    } else {
-      ctx.lineTo(p.x, p.y);
-      applyStroke(ctx);
-      ctx.beginPath();
-      ctx.moveTo(p.x, p.y);
-    }
-  });
-
-  cv.addEventListener('pointerup',     () => { canvasDrawing = false; });
-  cv.addEventListener('pointercancel', () => { canvasDrawing = false; });
-
-  // Text tool: click canvas → float an input, commit on Enter/blur
-  cv.addEventListener('click', e => {
-    if (canvasTool !== 'text') return;
-    const panel = document.querySelector('.canvas-panel-inner');
-    const pr    = panel.getBoundingClientRect();
-    const cvr   = cv.getBoundingClientRect();
-
-    const inp = document.getElementById('canvas-text-input');
-    // left/top relative to panel-inner so the input overlays the canvas pixel
-    inp.style.left  = (e.clientX - pr.left) + 'px';
-    inp.style.top   = (e.clientY - pr.top - 10) + 'px';
-    inp.style.color = canvasColor;
-    inp.style.display = 'block';
-    inp.value = '';
-    inp.focus();
-
-    function commitText() {
-      const txt = inp.value.trim();
-      inp.style.display = 'none';
-      if (!txt) return;
-      // Canvas coords = click pos relative to canvas element
-      const tx = e.clientX - cvr.left;
-      const ty = e.clientY - cvr.top;
-      ctx.font      = `${Math.max(14, brushSize * 2.5)}px Nunito, sans-serif`;
-      ctx.fillStyle = canvasColor;
-      ctx.fillText(txt, tx, ty);
-      inp.removeEventListener('blur',    commitText);
-      inp.removeEventListener('keydown', onKey);
-    }
-    function onKey(ke) {
-      if (ke.key === 'Enter')  { ke.preventDefault(); commitText(); }
-      if (ke.key === 'Escape') {
-        inp.style.display = 'none';
-        inp.removeEventListener('blur',    commitText);
-        inp.removeEventListener('keydown', onKey);
-      }
-    }
-    inp.addEventListener('blur',    commitText, { once: true });
-    inp.addEventListener('keydown', onKey);
-  });
+  _cvInitFloat(document.getElementById('cv-img-float'));
+  _cvInitFloat(document.getElementById('cv-tbox'));
 }
 
-function applyStroke(ctx) {
-  ctx.strokeStyle = canvasColor;
-  ctx.lineWidth   = brushSize;
-  ctx.lineCap     = 'round';
-  ctx.lineJoin    = 'round';
+function _cvXY(e) {
+  const cv = document.getElementById('cv-canvas');
+  const r  = cv.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * (cv.width / r.width),
+           y: (e.clientY - r.top)  * (cv.height / r.height) };
+}
+
+function cvDown(e) {
+  if (cvTool === 'text') return;
+  // FIX: was referencing undefined `canvas` variable — now uses local `cv`
+  const cv = document.getElementById('cv-canvas');
+  try { cv.setPointerCapture(e.pointerId); } catch(_) {}
+  cvActive = true;
+  const p  = _cvXY(e);
+  cvLastX = cvMidX = p.x;
+  cvLastY = cvMidY = p.y;
+  const props = CV_PROPS[cvTool] || CV_PROPS.pen;
+  const ctx   = cv.getContext('2d');
+  ctx.save();
+  ctx.globalAlpha = props.alpha;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, Math.max(0.5, cvSize * props.sizeM / 2), 0, Math.PI * 2);
+  ctx.fillStyle = props.eraser ? '#fafaf8' : cvColor;
+  ctx.fill();
+  ctx.restore();
+}
+
+function cvMove(e) {
+  if (!cvActive) return;
+  const p     = _cvXY(e);
+  const cv    = document.getElementById('cv-canvas');
+  const ctx   = cv.getContext('2d');
+  const props = CV_PROPS[cvTool] || CV_PROPS.pen;
+  const newMX = (cvLastX + p.x) / 2;
+  const newMY = (cvLastY + p.y) / 2;
+  ctx.save();
+  ctx.globalAlpha  = props.alpha;
+  ctx.strokeStyle  = props.eraser ? '#fafaf8' : cvColor;
+  ctx.lineWidth    = cvSize * props.sizeM;
+  ctx.lineCap      = props.cap;
+  ctx.lineJoin     = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cvMidX, cvMidY);
+  ctx.quadraticCurveTo(cvLastX, cvLastY, newMX, newMY);
   ctx.stroke();
+  ctx.restore();
+  cvLastX = p.x;  cvLastY = p.y;
+  cvMidX  = newMX; cvMidY  = newMY;
 }
 
-function setTool(t) {
-  canvasTool = t;
-  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-  const btn = document.getElementById('tool-' + t);
-  if (btn) btn.classList.add('active');
-  document.getElementById('drawing-canvas').style.cursor =
-    t === 'eraser' ? 'cell' : t === 'text' ? 'text' : 'crosshair';
+function cvUp() { cvActive = false; }
+
+function cvCanvasClick(e) {
+  if (cvTool !== 'text') return;
+  const wr = document.getElementById('cv-wrap').getBoundingClientRect();
+  cvOpenTextbox(e.clientX - wr.left, e.clientY - wr.top);
 }
 
-function setColor(c) {
-  canvasColor = c;
-  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('selected', s.dataset.color === c));
-  document.getElementById('custom-color').value = c;
+// ── Tool / colour / size controls ─────────────────────────────
+function cvSetTool(tool) {
+  cvTool = tool;
+  document.querySelectorAll('.cv-tool-btn').forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+  const cv = document.getElementById('cv-canvas');
+  if (cv) cv.dataset.tool = tool;
 }
 
-function updateBrushSize(v) {
-  brushSize = parseInt(v, 10);
+function cvSetColor(color) {
+  cvColor = color;
+  document.getElementById('cv-color-picker').value = color;
+  document.querySelectorAll('.cv-swatch').forEach(s =>
+    s.classList.toggle('active', s.style.background === color || s.style.backgroundColor === color));
+  const ta = document.getElementById('cv-tbox-ta');
+  if (ta) ta.style.color = color;
 }
 
-function clearCanvas() {
-  const cv  = document.getElementById('drawing-canvas');
-  const ctx = cv.getContext('2d');
-  ctx.clearRect(0, 0, cv.width, cv.height);
+function cvUpdateSize(val) {
+  cvSize = parseInt(val);
+  document.getElementById('cv-size-val').textContent = val;
+  const ta = document.getElementById('cv-tbox-ta');
+  if (ta) ta.style.fontSize = Math.max(14, cvSize * 3) + 'px';
+}
+
+// ── Image: floating adjustable layer ──────────────────────────
+let _cvFloatImg = null;
+
+function cvAddImage() { document.getElementById('cv-img-input').click(); }
+
+function cvLoadImageFile(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = e => _cvShowFloatImage(e.target.result);
+  r.readAsDataURL(file);
+  input.value = '';
+}
+
+function cvDropImage(e) {
+  e.preventDefault();
+  const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith('image/'));
+  if (!file) return;
+  const r = new FileReader();
+  r.onload = ev => _cvShowFloatImage(ev.target.result);
+  r.readAsDataURL(file);
+}
+
+function _cvShowFloatImage(src) {
+  const img  = new Image();
+  img.onload = () => {
+    _cvFloatImg = img;
+    const wrap    = document.getElementById('cv-wrap');
+    const toolbar = document.getElementById('cv-toolbar');
+    const maxW = wrap.clientWidth  * 0.6;
+    const maxH = (wrap.clientHeight - toolbar.offsetHeight) * 0.6;
+    // Natural size, only scale down if larger than 60% of canvas
+    const scale = Math.min(1, maxW / img.naturalWidth, maxH / img.naturalHeight);
+    const w = Math.round(img.naturalWidth  * scale);
+    const h = Math.round(img.naturalHeight * scale);
+    const x = Math.round((wrap.clientWidth  - w) / 2);
+    const y = Math.round((wrap.clientHeight - h) / 2);
+
+    const fl = document.getElementById('cv-img-float');
+    fl.style.cssText = `display:block;left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
+    document.getElementById('cv-img-float-el').src = src;
+  };
+  img.src = src;
+}
+
+function cvCommitImage() {
+  const fl      = document.getElementById('cv-img-float');
+  const canvas  = document.getElementById('cv-canvas');
+  const wrap    = document.getElementById('cv-wrap');
+  const toolbar = document.getElementById('cv-toolbar');
+  const dpr     = window.devicePixelRatio || 1;
+  const scaleX  = canvas.width  / (wrap.clientWidth  * dpr);
+  const scaleY  = canvas.height / ((wrap.clientHeight - toolbar.offsetHeight) * dpr);
+  const x  = parseFloat(fl.style.left);
+  const y  = parseFloat(fl.style.top)  - toolbar.offsetHeight;
+  const w  = fl.offsetWidth;
+  const h  = fl.offsetHeight;
+  const ctx = canvas.getContext('2d');
+  // Draw at natural image quality — no forced upscale
+  ctx.drawImage(_cvFloatImg, x / scaleX * dpr, y / scaleY * dpr,
+    w / scaleX * dpr, h / scaleY * dpr);
+  fl.style.display = 'none';
+  _cvFloatImg = null;
+}
+
+function cvCancelImage() {
+  document.getElementById('cv-img-float').style.display = 'none';
+  _cvFloatImg = null;
+}
+
+// ── Text box: floating draggable textarea ──────────────────────
+function cvOpenTextbox(x, y) {
+  const tbox = document.getElementById('cv-tbox');
+  const ta   = document.getElementById('cv-tbox-ta');
+  const w = 200, h = 100;
+  tbox.style.cssText = `display:block;left:${x}px;top:${y}px;width:${w}px;height:${h}px;`;
+  ta.style.fontSize  = Math.max(14, cvSize * 3) + 'px';
+  ta.style.color     = cvColor;
+  ta.value = '';
+  setTimeout(() => ta.focus(), 30);
+}
+
+function cvCommitTextbox() {
+  const tbox   = document.getElementById('cv-tbox');
+  const ta     = document.getElementById('cv-tbox-ta');
+  const text   = ta.value;
+  if (!text.trim()) { cvCancelTextbox(); return; }
+
+  const canvas  = document.getElementById('cv-canvas');
+  const wrap    = document.getElementById('cv-wrap');
+  const toolbar = document.getElementById('cv-toolbar');
+  const dpr     = window.devicePixelRatio || 1;
+  const ctx     = canvas.getContext('2d');
+  const fs      = Math.max(14, cvSize * 3);
+
+  // Position of textbox relative to canvas top-left (in CSS px)
+  const x = parseFloat(tbox.style.left);
+  const y = parseFloat(tbox.style.top) - toolbar.offsetHeight;
+  const w = tbox.offsetWidth;
+
+  const scaleX = canvas.width  / (wrap.clientWidth  * dpr);
+  const scaleY = canvas.height / ((wrap.clientHeight - toolbar.offsetHeight) * dpr);
+  const cx = x / scaleX * dpr;
+  const cy = y / scaleY * dpr;
+
+  ctx.font      = `${fs}px UglyDave, sans-serif`;
+  ctx.fillStyle = cvColor;
+
+  // Word-wrap the text within the box width
+  const lineH   = fs * 1.3;
+  const maxW    = (w / scaleX * dpr) - 12;
+  const lines   = [];
+  for (const para of text.split('\n')) {
+    const words = para.split(' ');
+    let cur = '';
+    for (const word of words) {
+      const test = cur ? cur + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = word; }
+      else cur = test;
+    }
+    lines.push(cur);
+  }
+  lines.forEach((line, i) => ctx.fillText(line, cx + 6, cy + fs + i * lineH));
+  tbox.style.display = 'none';
+}
+
+function cvCancelTextbox() {
+  document.getElementById('cv-tbox').style.display = 'none';
+}
+
+// ── Drag + resize for floating overlays ───────────────────────
+let _cvDrag = null;
+
+function _cvInitFloat(el) {
+  el.addEventListener('pointerdown', e => {
+    const isDot    = e.target.classList.contains('cv-hdot');
+    const isBar    = !!e.target.closest('.cv-float-bar');
+    const isTA     = e.target.tagName === 'TEXTAREA';
+    const isHandle = e.target.id === 'cv-tbox-handle';
+
+    if (isDot) {
+      _cvDrag = {
+        type: 'resize', handle: e.target.dataset.handle, el,
+        startX: e.clientX, startY: e.clientY,
+        origL: parseFloat(el.style.left), origT: parseFloat(el.style.top),
+        origW: el.offsetWidth,            origH: el.offsetHeight,
+      };
+    } else if (!isBar && !isTA || isHandle) {
+      // Move: from drag handle (text box) or from anywhere on image float
+      _cvDrag = {
+        type: 'move', el,
+        startX: e.clientX, startY: e.clientY,
+        origL: parseFloat(el.style.left), origT: parseFloat(el.style.top),
+      };
+    }
+    if (_cvDrag) { e.stopPropagation(); e.preventDefault(); el.setPointerCapture(e.pointerId); }
+  });
+}
+
+document.addEventListener('pointermove', e => {
+  if (!_cvDrag) return;
+  const dx = e.clientX - _cvDrag.startX;
+  const dy = e.clientY - _cvDrag.startY;
+  const el = _cvDrag.el;
+  if (_cvDrag.type === 'move') {
+    el.style.left = (_cvDrag.origL + dx) + 'px';
+    el.style.top  = (_cvDrag.origT + dy) + 'px';
+  } else {
+    const h = _cvDrag.handle;
+    if (h === 'se') {
+      el.style.width  = Math.max(60, _cvDrag.origW + dx) + 'px';
+      el.style.height = Math.max(40, _cvDrag.origH + dy) + 'px';
+    } else if (h === 'sw') {
+      const newW = Math.max(60, _cvDrag.origW - dx);
+      el.style.left  = (_cvDrag.origL + _cvDrag.origW - newW) + 'px';
+      el.style.width = newW + 'px';
+      el.style.height = Math.max(40, _cvDrag.origH + dy) + 'px';
+    } else if (h === 'ne') {
+      el.style.width  = Math.max(60, _cvDrag.origW + dx) + 'px';
+      const newH = Math.max(40, _cvDrag.origH - dy);
+      el.style.top    = (_cvDrag.origT + _cvDrag.origH - newH) + 'px';
+      el.style.height = newH + 'px';
+    } else if (h === 'nw') {
+      const newW = Math.max(60, _cvDrag.origW - dx);
+      const newH = Math.max(40, _cvDrag.origH - dy);
+      el.style.left   = (_cvDrag.origL + _cvDrag.origW - newW) + 'px';
+      el.style.top    = (_cvDrag.origT + _cvDrag.origH - newH) + 'px';
+      el.style.width  = newW + 'px';
+      el.style.height = newH + 'px';
+    }
+  }
+});
+document.addEventListener('pointerup', () => { _cvDrag = null; });
+
+// ── Download / email ──────────────────────────────────────────
+function cvEmail() {
+  const canvas = document.getElementById('cv-canvas');
+  const a = document.createElement('a');
+  a.href = canvas.toDataURL('image/png');
+  a.download = 'hm-canvas.png';
+  a.click();
+  showToast('Canvas saved — attach it to your email 📧');
+}
+
+// ── Clear ─────────────────────────────────────────────────────
+function cvClear() {
+  cvCancelImage();
+  cvCancelTextbox();
+  const canvas = document.getElementById('cv-canvas');
+  const ctx    = canvas.getContext('2d');
+  ctx.fillStyle = '#fafaf8';
+  ctx.fillRect(0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
 }
 
 
@@ -1425,12 +1657,12 @@ function selectStudyDur(btn) {
   document.getElementById('study-custom-min').value = '';
 }
 function confirmStudyTimer() {
-  const custom = parseInt(document.getElementById('study-custom-min').value);
+  const custom = parseFloat(document.getElementById('study-custom-min').value);
   const mins   = custom > 0 ? custom : studySelectedMin;
-  if (!mins || mins < 1) { showToast('Pick a duration first ⏱'); return; }
+  if (!mins || mins < 0.5) { showToast('Minimum is 30 seconds ⏱'); return; }
 
   cancelStudyTimerModal();
-  studyTimerSeconds = mins * 60;
+  studyTimerSeconds = Math.round(mins * 60);
 
   // Swap start button → countdown display
   document.getElementById('study-start-btn').style.display   = 'none';
@@ -1439,6 +1671,29 @@ function confirmStudyTimer() {
   if (studyTimerInterval) clearInterval(studyTimerInterval);
   studyTimerInterval = setInterval(_tickStudyTimer, 1000);
 }
+function playStudyAlarm() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const vol = 0.28;
+    function ding(t, freq) {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(vol, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 2.2);
+      osc.start(t);
+      osc.stop(t + 2.2);
+    }
+    const now = ctx.currentTime;
+    ding(now,       880);
+    ding(now + 0.5, 1108);
+    ding(now + 1.0, 1320);
+  } catch (e) {}
+}
+
 function _tickStudyTimer() {
   const m = Math.floor(studyTimerSeconds / 60);
   const s = studyTimerSeconds % 60;
@@ -1447,6 +1702,7 @@ function _tickStudyTimer() {
   if (studyTimerSeconds <= 0) {
     clearInterval(studyTimerInterval);
     studyTimerInterval = null;
+    playStudyAlarm();
     showToast('⏰ Time\'s up! Great work! 🎉');
     _resetStudyTimer();
     return;
