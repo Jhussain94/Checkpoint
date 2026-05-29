@@ -1,10 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Tells the browser what type of HTML this is -->
   <meta charset="UTF-8"/>
+  <!-- Makes the website responsive on phones/tablets -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+   <!-- Title shown on browser tab -->
   <title>CHECKPOINT — A digital archive by Camberwell students</title>
+   <!-- Short description for search engines -->
   <meta name="description" content="Explore memories, music, unfinished thoughts, and creative fragments left by Camberwell students."/>
+  <!-- Connects the CSS file for styling -->
   <link rel="stylesheet" href="css/styles.css"/>
 </head>
 <body>
@@ -118,6 +123,22 @@
       <span class="mzb-dot"></span>
       <span class="mzb-label">📷 Camera Compass</span>
     </button>
+
+    <!-- Momo's animated flowers overlaid on the map -->
+    <div id="map-flowers" aria-hidden="true">
+      <img class="map-flower flower-a" src="img/yellow-flowers.png" alt="" style="left:8%;top:86%;--fscale:1.8;--fdelay:0.1s;--fdur:5.8s"/>
+      <img class="map-flower flower-b" src="img/flower.png"         alt="" style="left:15%;top:80%;--fscale:1.4;--fdelay:0.7s;--fdur:6.5s"/>
+      <img class="map-flower flower-a" src="img/yellow-flowers.png" alt="" style="left:22%;top:88%;--fscale:1.6;--fdelay:1.3s;--fdur:5.2s"/>
+      <img class="map-flower flower-b" src="img/flower.png"         alt="" style="left:30%;top:82%;--fscale:1.2;--fdelay:0.4s;--fdur:7.1s"/>
+      <img class="map-flower flower-a" src="img/yellow-flowers.png" alt="" style="left:38%;top:85%;--fscale:1.5;--fdelay:1.9s;--fdur:6.0s"/>
+      <img class="map-flower flower-b" src="img/flower.png"         alt="" style="left:45%;top:80%;--fscale:1.3;--fdelay:0.8s;--fdur:5.5s"/>
+      <img class="map-flower flower-a" src="img/yellow-flowers.png" alt="" style="left:55%;top:86%;--fscale:1.7;--fdelay:2.1s;--fdur:6.8s"/>
+      <img class="map-flower flower-b" src="img/flower.png"         alt="" style="left:63%;top:83%;--fscale:1.1;--fdelay:0.3s;--fdur:5.9s"/>
+      <img class="map-flower flower-a" src="img/yellow-flowers.png" alt="" style="left:70%;top:87%;--fscale:1.9;--fdelay:1.5s;--fdur:6.3s"/>
+      <img class="map-flower flower-b" src="img/flower.png"         alt="" style="left:78%;top:81%;--fscale:1.4;--fdelay:0.6s;--fdur:5.7s"/>
+      <img class="map-flower flower-a" src="img/yellow-flowers.png" alt="" style="left:86%;top:85%;--fscale:1.6;--fdelay:2.4s;--fdur:6.6s"/>
+      <img class="map-flower flower-b" src="img/flower.png"         alt="" style="left:93%;top:82%;--fscale:1.2;--fdelay:1.0s;--fdur:5.4s"/>
+    </div>
 
     <!-- HTML overlay: title sits above the map -->
     <div id="world-overlay">
@@ -429,6 +450,51 @@
     </div>
 
     <p class="timer-note" id="timer-note"></p>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN 3 — LEAVE A DROP (illustrated page)
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-leave-page">
+  <div id="leave-page-wrap">
+
+    <!-- Full-bleed illustrated background -->
+    <img id="leave-page-bg"
+         src="img/Leave%20a%20Drop/Leave%20a%20Drop%20(2).png"
+         alt="Leave a drop"/>
+
+    <!-- Back to map — sits over the painted text top-left -->
+    <button id="leave-page-back" onclick="backToMap()">← back to map</button>
+
+    <!-- Form overlaid on the illustrated input box (bottom-left area) -->
+    <div id="leave-page-form">
+      <input  class="lp-input" id="lp-url" type="url"
+              placeholder="link your song, video, playlist…"/>
+      <textarea class="lp-input lp-textarea" id="lp-msg" maxlength="200"
+                placeholder="or write something…"></textarea>
+      <div class="lp-mood-row">
+        <button class="lp-mood-chip" data-mood="hopeful"     onclick="selectLpMood('hopeful')">✨ hopeful</button>
+        <button class="lp-mood-chip" data-mood="inspired"    onclick="selectLpMood('inspired')">🔥 inspired</button>
+        <button class="lp-mood-chip" data-mood="nostalgic"   onclick="selectLpMood('nostalgic')">🍂 nostalgic</button>
+        <button class="lp-mood-chip" data-mood="peaceful"    onclick="selectLpMood('peaceful')">🌿 peaceful</button>
+        <button class="lp-mood-chip" data-mood="chaotic"     onclick="selectLpMood('chaotic')">⚡ chaotic</button>
+        <button class="lp-mood-chip" data-mood="overwhelmed" onclick="selectLpMood('overwhelmed')">🌀 overwhelmed</button>
+        <button class="lp-mood-chip" data-mood="lonely"      onclick="selectLpMood('lonely')">🌙 lonely</button>
+      </div>
+      <button class="lp-drop-btn" onclick="submitLeavePageDrop()">drop it →</button>
+    </div>
+
+    <!-- Success state — swaps in after submit -->
+    <div id="leave-page-success">
+      <div class="lp-success-icon">✨</div>
+      <div class="lp-success-title">Drop left behind.</div>
+      <p class="lp-success-sub">Your fragment is now part of the world.</p>
+      <button class="lp-success-back"  onclick="backToMap()">← back to map</button>
+      <button class="lp-success-board" onclick="backToMap(); openNoticeBoard();">📋 See the Notice Board</button>
+    </div>
+
   </div>
 </div>
 

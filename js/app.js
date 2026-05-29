@@ -113,17 +113,65 @@ function onSceneLoaded() {
 }
 
 // ── LOADING SCREEN ANIMATIONS ─────────────────────────────────
-let boyFrameTimer = null; // kept so stopLoadingAnimations is safe to call
+let boyFrameTimer  = null;
+let skyLeafInterval = null;
+let fallingLeafTimers = [];
+
+// Coloured leaf images from Momo — Yellow Leaf omitted (file not available)
+const LOADING_LEAF_FILES = [
+  'img/loading screen assets/2 Leaf.png',
+  'img/loading screen assets/Leaf.png',
+  'img/loading screen assets/Orange Leaf.png',
+  'img/loading screen assets/green leaf.png',
+  'img/loading screen assets/red leaf.png',
+];
+
+function getRandomLoadingLeafSrc() {
+  return LOADING_LEAF_FILES[Math.floor(Math.random() * LOADING_LEAF_FILES.length)];
+}
 
 function startLoadingAnimations() {
-  // Boy walk animation is pure CSS — no JS needed.
   startFallingLeaves();
-
-  // Wind particles removed — falling leaves handle the leaf animation
+  startSkyLeafDrift();
 }
 
 function stopLoadingAnimations() {
+  // Clear any pending leaf spawn timers
+  fallingLeafTimers.forEach(id => clearTimeout(id));
+  fallingLeafTimers = [];
+  if (skyLeafInterval) { clearInterval(skyLeafInterval); skyLeafInterval = null; }
   reduceAudioForMap();
+}
+
+// Sky leaves drift across the arrival screen from upper-left (Momo)
+function startSkyLeafDrift() {
+  const container = document.getElementById('falling-leaves');
+  if (!container) return;
+
+  function spawnSkyLeaf() {
+    const screen = document.getElementById('screen-arrival');
+    if (!screen || !screen.classList.contains('active')) return;
+
+    const leaf = document.createElement('img');
+    leaf.src       = getRandomLoadingLeafSrc();
+    leaf.className = 'sky-leaf';
+
+    const dur = 14 + Math.random() * 10;
+    leaf.style.left = (Math.random() * 90) + '%';
+    leaf.style.top  = (Math.random() * 30) + '%';
+    leaf.style.width = (16 + Math.random() * 14) + 'px';
+    leaf.style.setProperty('--ldur',     dur + 's');
+    leaf.style.setProperty('--leaf-dx',  (-80 + Math.random() * 40) + 'px');
+    leaf.style.setProperty('--leaf-dy',  (120 + Math.random() * 100) + 'px');
+    leaf.style.setProperty('--leaf-rot', (150 + Math.random() * 200) + 'deg');
+
+    container.appendChild(leaf);
+    const removeId = setTimeout(() => leaf.remove(), (dur + 1) * 1000);
+    fallingLeafTimers.push(removeId);
+  }
+
+  spawnSkyLeaf();
+  skyLeafInterval = setInterval(spawnSkyLeaf, 3500);
 }
 
 function reduceAudioForMap() {
@@ -145,10 +193,10 @@ function startFallingLeaves() {
     if (!screen || !screen.classList.contains('active')) return;
 
     const leaf = document.createElement('img');
-    leaf.src       = 'img/Leaf.png';
+    leaf.src       = getRandomLoadingLeafSrc();
     leaf.className = 'fall-leaf';
 
-    const dur = 12 + Math.random() * 8;   // 12–20 seconds — very slow fall
+    const dur = 12 + Math.random() * 8;
     leaf.style.left = (tree.x + (-2 + Math.random() * 4)) + '%';
     leaf.style.top  = (tree.y + (Math.random() * 3)) + '%';
     leaf.style.setProperty('--lsz',      (14 + Math.random() * 10) + 'px');
@@ -158,14 +206,17 @@ function startFallingLeaves() {
     leaf.style.setProperty('--leaf-rot', (160 + Math.random() * 220) + 'deg');
 
     container.appendChild(leaf);
-    setTimeout(() => leaf.remove(), (dur + 1) * 1000);
+    const removeId = setTimeout(() => leaf.remove(), (dur + 1) * 1000);
+    fallingLeafTimers.push(removeId);
   }
 
   TREE_POSITIONS.forEach(tree => {
     function scheduleNext() {
-      setTimeout(() => { spawnLeaf(tree); scheduleNext(); }, 5000 + Math.random() * 5000);
+      const tid = setTimeout(() => { spawnLeaf(tree); scheduleNext(); }, 5000 + Math.random() * 5000);
+      fallingLeafTimers.push(tid);
     }
-    setTimeout(() => { spawnLeaf(tree); scheduleNext(); }, 1000 + Math.random() * 2000);
+    const tid = setTimeout(() => { spawnLeaf(tree); scheduleNext(); }, 1000 + Math.random() * 2000);
+    fallingLeafTimers.push(tid);
   });
 }
 
