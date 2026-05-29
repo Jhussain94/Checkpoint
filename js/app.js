@@ -1072,12 +1072,10 @@ function openLeaveFromPicnic() {
 let lpSelectedMood = '';
 
 function showLeaveDropPage() {
-  // Reset form
   document.getElementById('lp-url').value = '';
+  document.getElementById('lp-file').value = '';
   document.getElementById('leave-page-form').style.display = '';
   document.getElementById('leave-page-success').style.display = 'none';
-
-  // Switch to screen 3
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-leave-page').classList.add('active');
 }
@@ -1095,15 +1093,75 @@ function selectLpMood(mood) {
 }
 
 async function submitLeavePageDrop() {
-  const url = document.getElementById('lp-url').value.trim();
+  const url  = document.getElementById('lp-url').value.trim();
+  const file = document.getElementById('lp-file').files[0];
 
-  if (!url) { showToast('Paste a link first ✍️'); return; }
+  // Nothing typed and no file selected → open file picker
+  if (!url && !file) {
+    document.getElementById('lp-file').click();
+    return;
+  }
 
-  let type = 'song';
+  if (file) {
+    await _submitLpFile(file);
+    return;
+  }
+
+  // URL path
+  let type = 'text';
   let content = url;
   if (url.includes('spotify.com'))                                   { type = 'song';  content = toSpotifyEmbed(url); }
   else if (url.includes('youtube.com') || url.includes('youtu.be')) { type = 'video'; content = toYTEmbed(url); }
+  else if (/\.(jpe?g|png|gif|webp)$/i.test(url))                    { type = 'photo'; }
 
+  await _saveLpDrop(type, content);
+}
+
+// Called when user picks a file from the file picker
+async function onLpFileSelected(input) {
+  const file = input.files[0];
+  if (!file) return;
+  await _submitLpFile(file);
+}
+
+async function _submitLpFile(file) {
+  const isImage = file.type.startsWith('image/');
+  const isAudio = file.type.startsWith('audio/') || /\.mp3$/i.test(file.name);
+  const isVideo = file.type.startsWith('video/');
+
+  if (isImage) {
+    // Compress image to JPEG base64 (same as camera compass)
+    const dataUrl = await _compressLpImage(file, 900, 0.78);
+    await _saveLpDrop('photo', dataUrl);
+  } else if (isAudio || isVideo) {
+    // Create object URL for in-session playback
+    const objUrl = URL.createObjectURL(file);
+    await _saveLpDrop(isAudio ? 'audio' : 'video', objUrl);
+  } else {
+    showToast('Paste a link for that file type 🔗');
+  }
+}
+
+function _compressLpImage(file, maxPx, quality) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxPx / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(img.width  * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function _saveLpDrop(type, content) {
   const bounds = { x: [56, 98], y: [56, 86] };
   const rx = bounds.x[0] + Math.random() * (bounds.x[1] - bounds.x[0]);
   const ry = bounds.y[0] + Math.random() * (bounds.y[1] - bounds.y[0]);

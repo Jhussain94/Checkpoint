@@ -789,42 +789,41 @@ html, body {
   cursor: pointer;
 }
 
-/* ── Form — overlaid precisely on the illustrated input bar + drop it button ── */
+/* ── Form row — sits over the illustrated input + button on the same line ── */
 #leave-page-form {
   position: absolute;
   left: 5%;
-  top: 63.5%;
+  top: 65.5%;
   width: 30%;
+  height: 5%;
   z-index: 20;
   display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex-direction: row;
+  align-items: stretch;
 }
 
-/* Invisible input — sits exactly over the drawn white rectangle */
+/* Invisible input — covers the white rectangle (left ~74% of the row) */
 .lp-input {
+  flex: 0 0 74%;
   background: transparent;
   border: none;
-  border-radius: 3px;
   font-family: 'Nunito', sans-serif;
   font-size: 0.85rem;
   color: #3a2a08;
-  padding: 7px 10px;
+  padding: 0 8px;
   outline: none;
-  width: 100%;
   cursor: text;
+  min-width: 0;
 }
 .lp-input::placeholder { color: transparent; }
 
-/* Invisible hit-target over the illustrated "drop it" button */
+/* Invisible hit-target — covers the green "drop it" button (right ~26%) */
 .lp-drop-btn {
+  flex: 0 0 26%;
   background: transparent;
   border: none;
-  width: 48%;
-  height: 100%;
-  padding: 8px 0;
   cursor: pointer;
-  align-self: flex-end;
+  padding: 0;
 }
 
 /* Success card */
