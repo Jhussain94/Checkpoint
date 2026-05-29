@@ -465,14 +465,13 @@
          src="img/Leave%20a%20Drop/Leave%20a%20Drop%20(2).png"
          alt="Leave a drop"/>
 
-    <!-- Back to map — visible button top-left -->
-    <button id="leave-page-back" onclick="backToMap()">← back to map</button>
+    <!-- Invisible hit-target over the illustrated "← back to map" text -->
+    <button id="leave-page-back" onclick="backToMap()" aria-label="Back to map"></button>
 
-    <!-- Minimal form — single link bar overlaid on the illustrated input box -->
+    <!-- Invisible overlays — illustration provides all visual UI -->
     <div id="leave-page-form">
-      <input class="lp-input" id="lp-url" type="url"
-             placeholder="paste a link…"/>
-      <button class="lp-drop-btn" onclick="submitLeavePageDrop()">drop it →</button>
+      <input class="lp-input" id="lp-url" type="url" aria-label="Link your media"/>
+      <button class="lp-drop-btn" onclick="submitLeavePageDrop()" aria-label="Drop it"></button>
     </div>
 
     <!-- Success state — swaps in after submit -->
