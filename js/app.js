@@ -159,8 +159,8 @@ function startSkyLeafDrift() {
     const dur = 14 + Math.random() * 10;
     leaf.style.left = (Math.random() * 90) + '%';
     leaf.style.top  = (Math.random() * 30) + '%';
-    leaf.style.width = (16 + Math.random() * 14) + 'px';
-    leaf.style.setProperty('--ldur',     dur + 's');
+    leaf.style.width = (28 + Math.random() * 22) + 'px';
+    leaf.style.animationDuration = dur + 's';
     leaf.style.setProperty('--leaf-dx',  (-80 + Math.random() * 40) + 'px');
     leaf.style.setProperty('--leaf-dy',  (120 + Math.random() * 100) + 'px');
     leaf.style.setProperty('--leaf-rot', (150 + Math.random() * 200) + 'deg');
@@ -199,8 +199,8 @@ function startFallingLeaves() {
     const dur = 12 + Math.random() * 8;
     leaf.style.left = (tree.x + (-2 + Math.random() * 4)) + '%';
     leaf.style.top  = (tree.y + (Math.random() * 3)) + '%';
-    leaf.style.setProperty('--lsz',      (14 + Math.random() * 10) + 'px');
-    leaf.style.setProperty('--ldur',     dur + 's');
+    leaf.style.width = (22 + Math.random() * 14) + 'px';
+    leaf.style.animationDuration = dur + 's';
     leaf.style.setProperty('--leaf-dx',  (-30 + Math.random() * 60) + 'px');
     leaf.style.setProperty('--leaf-dy',  (200 + Math.random() * 120) + 'px');
     leaf.style.setProperty('--leaf-rot', (160 + Math.random() * 220) + 'deg');
@@ -305,39 +305,21 @@ const BTN_W = 0.120;   // button width as fraction of image width
 const BTN_H = 0.065;   // button height as fraction of image height
 
 function positionStartButton() {
-  const img  = document.getElementById('arrival-scene');
   const btn  = document.getElementById('start-btn');
   const wrap = document.getElementById('arrival-img-wrap');
-  if (!img || !btn || !wrap) return;
+  if (!btn || !wrap) return;
 
-  // The image wrapper now has CSS inset/border-radius — use its rendered
-  // dimensions so the button overlays the correct spot inside the frame.
-  const natW = img.naturalWidth  || 3508;
-  const natH = img.naturalHeight || 2480;
-  const imgAspect  = natW / natH;
+  // Wrapper is now aspect-ratio locked to exactly match the illustration —
+  // wrapper pixels map 1:1 to image fractions, no cover offset needed.
   const vW = wrap.clientWidth;
   const vH = wrap.clientHeight;
-  const vAspect = vW / vH;
 
-  // Cover math: find the rendered image rect (may extend beyond viewport)
-  let rW, rH, oX, oY;
-  if (vAspect > imgAspect) {
-    // Screen wider → scale by width, crop top & bottom
-    rW = vW; rH = vW / imgAspect;
-    oX = 0;  oY = (vH - rH) / 2;        // oY is negative when cropped
-  } else {
-    // Screen taller → scale by height, crop sides
-    rH = vH; rW = vH * imgAspect;
-    oX = (vW - rW) / 2; oY = 0;         // oX is negative when cropped
-  }
-
-  // Position the invisible button over the painted START button
-  const bW = rW * BTN_W;
-  const bH = rH * BTN_H;
-  btn.style.width     = bW + 'px';
-  btn.style.height    = bH + 'px';
-  btn.style.left      = (oX + rW * BTN_X - bW / 2) + 'px';
-  btn.style.top       = (oY + rH * BTN_Y - bH / 2) + 'px';
+  const bW = vW * BTN_W;
+  const bH = vH * BTN_H;
+  btn.style.width  = bW + 'px';
+  btn.style.height = bH + 'px';
+  btn.style.left   = (vW * BTN_X - bW / 2) + 'px';
+  btn.style.top    = (vH * BTN_Y - bH / 2) + 'px';
   btn.style.transform = 'none';
 }
 

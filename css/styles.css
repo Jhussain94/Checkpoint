@@ -174,9 +174,8 @@ html, body {
   position: absolute;
   pointer-events: none;
   opacity: 0;
-  width: var(--lsz, 20px);
   height: auto;
-  animation: leafFall var(--ldur, 14s) ease-in 0s 1 forwards;
+  animation: leafFall 14s ease-in 0s 1 forwards;
 }
 @keyframes leafFall {
   0%   { opacity: 0;   transform: translate(0, 0) rotate(0deg); }
@@ -709,32 +708,27 @@ html, body {
 .map-flower {
   position: absolute;
   height: auto;
-  width: calc(28px * var(--fscale, 1));
+  width: 55px;
   transform-origin: bottom center;
   animation-name: flowerSway;
-  animation-duration: var(--fdur, 6s);
-  animation-delay: var(--fdelay, 0s);
+  animation-duration: 6s;
+  animation-delay: 0s;
   animation-iteration-count: infinite;
   animation-timing-function: ease-in-out;
-  animation-fill-mode: both;
+  animation-play-state: running;
 }
 .map-flower.flower-a { animation-name: flowerSway; }
 .map-flower.flower-b { animation-name: flowerSwayWide; }
 
 @keyframes flowerSway {
-  0%   { transform: rotate(-4deg); }
-  50%  { transform: rotate(4deg);  }
-  100% { transform: rotate(-4deg); }
+  0%   { transform: rotate(-5deg); }
+  50%  { transform: rotate(5deg);  }
+  100% { transform: rotate(-5deg); }
 }
 @keyframes flowerSwayWide {
-  0%   { transform: rotate(-7deg); }
-  50%  { transform: rotate(7deg);  }
-  100% { transform: rotate(-7deg); }
-}
-@keyframes flowerSwayLight {
-  0%   { transform: rotate(-2deg); }
-  50%  { transform: rotate(2deg);  }
-  100% { transform: rotate(-2deg); }
+  0%   { transform: rotate(-9deg); }
+  50%  { transform: rotate(9deg);  }
+  100% { transform: rotate(-9deg); }
 }
 
 /* ─── SKY LEAVES (Momo — loading screen) ────────────────────────────────── */
@@ -743,7 +737,7 @@ html, body {
   pointer-events: none;
   opacity: 0;
   height: auto;
-  animation: skyLeafDrift var(--ldur, 18s) ease-in-out 0s 1 forwards;
+  animation: skyLeafDrift 18s ease-in-out 0s 1 forwards;
 }
 @keyframes skyLeafDrift {
   0%   { opacity: 0;    transform: translate(0, 0) rotate(0deg); }
