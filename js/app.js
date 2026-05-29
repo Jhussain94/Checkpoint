@@ -1068,11 +1068,9 @@ const SN_COLORS  = ['sn-yellow','sn-pink','sn-blue','sn-green','sn-orange'];
 const SN_ROTATES = [-3, -1.5, 0, 1.5, 3, -2.5, 2, -0.5];
 
 function openNoticeBoard() {
-  walkToZone(43, 52, () => {
-    buildNoticeBoardPins();
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById('screen-noticeboard').classList.add('active');
-  });
+  buildNoticeBoardPins();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-noticeboard').classList.add('active');
 }
 function closeNoticeBoard() {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));

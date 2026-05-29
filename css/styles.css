@@ -46,8 +46,16 @@ html, body {
   opacity: 0; pointer-events: none;
   transition: opacity 0.7s ease;
 }
+/* Children must also be non-interactive when their screen is inactive —
+   pointer-events is NOT inherited so we set it explicitly on descendants. */
+.screen * {
+  pointer-events: none;
+}
 .screen.active {
   opacity: 1; pointer-events: all;
+}
+.screen.active * {
+  pointer-events: auto;
 }
 
 /* ─── ARRIVAL SCREEN (loading + start merged) ───────────────────────────── */
