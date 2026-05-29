@@ -449,10 +449,10 @@ function closeDrop() {
 
 function renderDropContent(drop) {
   if (drop.type === 'song' || drop.type === 'playlist') {
-    return `<iframe src="${drop.content}" width="100%" height="152" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius:12px;display:block"></iframe>`;
+    return `<iframe src="${drop.content}" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius:14px;display:block"></iframe>`;
   }
   if (drop.type === 'video') {
-    return `<iframe src="${drop.content}" width="100%" height="220" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" style="border-radius:12px;display:block"></iframe>`;
+    return `<iframe src="${drop.content}" width="100%" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy" style="border-radius:14px;display:block;aspect-ratio:16/9;height:auto"></iframe>`;
   }
   if (drop.type === 'photo') {
     return `<img src="${drop.content}" alt="" loading="lazy"/>`;

@@ -388,72 +388,78 @@ html, body {
 /* ─── DROP MODAL ─────────────────────────────────────────────────────────── */
 #modal-drop {
   position: fixed; inset: 0; z-index: 100;
-  display: flex; align-items: flex-end; justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   background: rgba(42,26,4,0);
   pointer-events: none;
-  transition: background 0.4s ease;
+  transition: background 0.35s ease;
+  padding: 20px;
 }
 #modal-drop.open {
-  background: rgba(42,26,4,0.52);
+  background: rgba(42,26,4,0.80);
   pointer-events: all;
 }
 .drop-panel {
   background: #fdf8ec;
-  border-radius: 24px 24px 0 0;
-  padding: 12px 28px 40px;
-  width: 100%; max-width: 580px;
-  max-height: 80vh; overflow-y: auto;
-  transform: translateY(100%);
-  transition: transform 0.48s cubic-bezier(0.32,0.72,0,1);
+  border-radius: 20px;
+  padding: 20px 26px 28px;
+  width: 100%; max-width: 760px;
+  max-height: 92vh; overflow-y: auto;
+  transform: scale(0.9) translateY(24px);
+  opacity: 0;
+  transition: transform 0.38s cubic-bezier(0.32,0.72,0,1), opacity 0.32s ease;
   border: 2px solid rgba(139,96,20,0.12);
-  box-shadow: 0 -6px 40px rgba(0,0,0,0.18);
+  box-shadow: 0 12px 80px rgba(0,0,0,0.35);
 }
-#modal-drop.open .drop-panel { transform: translateY(0); }
+#modal-drop.open .drop-panel {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
 
-/* drag handle */
-.drag-handle {
-  width: 44px; height: 5px;
-  background: rgba(139,96,20,0.2);
-  border-radius: 3px;
-  margin: 0 auto 18px;
-}
+/* drag handle — repurposed as a top divider line */
+.drag-handle { display: none; }
 
 .drop-row-top {
   display: flex; justify-content: space-between; align-items: flex-start;
-  margin-bottom: 4px;
+  margin-bottom: 12px;
 }
 .drop-found-label {
   font-family: 'Fredoka One', cursive;
-  font-size: 0.72rem; letter-spacing: 0.12em;
+  font-size: 0.78rem; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--brown);
 }
 .drop-close {
-  background: none; border: none; cursor: pointer;
-  font-size: 1.3rem; color: var(--brown);
-  opacity: 0.55; line-height: 1; padding: 2px 4px;
-  transition: opacity 0.2s;
+  background: rgba(139,96,20,0.1); border: none; cursor: pointer;
+  font-size: 1.1rem; color: var(--brown);
+  width: 32px; height: 32px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+  flex-shrink: 0;
 }
-.drop-close:hover { opacity: 1; }
+.drop-close:hover { background: rgba(139,96,20,0.22); }
 
 .drop-content { margin: 14px 0; }
 .drop-content iframe {
-  width: 100%; border: none; border-radius: 12px;
+  width: 100%; border: none; border-radius: 14px;
   display: block;
 }
+/* Photos: show full image uncropped */
 .drop-content img {
-  width: 100%; border-radius: 12px;
-  object-fit: cover; max-height: 220px; display: block;
+  width: 100%; height: auto;
+  border-radius: 14px; display: block;
+  max-height: 70vh; object-fit: contain;
+  background: rgba(0,0,0,0.03);
 }
 .drop-text-body {
-  font-size: 1.05rem; line-height: 1.75;
+  font-size: 1.1rem; line-height: 1.8;
   font-style: italic;
   border-left: 3px solid var(--brown);
   padding-left: 16px;
   color: var(--dark);
+  white-space: pre-wrap;
 }
 
 .drop-caption {
-  font-size: 0.9rem; color: #6a4a18; line-height: 1.5;
+  font-size: 0.92rem; color: #6a4a18; line-height: 1.5;
   margin: 10px 0;
 }
 
@@ -461,7 +467,7 @@ html, body {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   margin-top: 14px; padding-top: 14px;
   border-top: 1px solid rgba(139,96,20,0.12);
-  font-size: 0.82rem; color: #9a7048;
+  font-size: 0.84rem; color: #9a7048;
 }
 .drop-footer .sep { opacity: 0.4; }
 
@@ -952,10 +958,16 @@ html, body {
   .map-zone-btn { padding: 6px; }
 
   /* ── Drop & leave panels ── */
-  .drop-panel, .leave-panel {
+  .drop-panel {
+    padding: 16px 16px 24px;
+    max-height: 94vh;
+    border-radius: 16px;
+  }
+  .leave-panel {
     padding: 10px 16px 36px;
     max-height: 92vh;
   }
+  #modal-drop { padding: 10px; }
 
   /* ── Meadow panel ── */
   #panel-meadow    { padding: 20px 14px 48px; }
