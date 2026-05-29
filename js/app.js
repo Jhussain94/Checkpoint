@@ -675,6 +675,8 @@ function wireEvents() {
   // escape key
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
+      if (document.getElementById('screen-study').classList.contains('active')) { backFromStudy(); return; }
+      if (document.getElementById('screen-leave-page').classList.contains('active')) { backToMap(); return; }
       if (leaveOpen)        closeLeaveForm();
       else if (activeDrop)  closeDrop();
       else if (meadowOpen)  closeMeadow();
@@ -1427,13 +1429,19 @@ let timerRemaining = 25 * 60; // default 25 min in seconds
 let timerRunning   = false;
 
 function openLibrary() {
-  walkToZone(14, 44, () => {
-    document.getElementById('panel-library').classList.add('open');
-    syncTimerDisplay();
-  });
+  walkToZone(14, 44, () => showStudyLobby());
 }
 function closeLibrary() {
   document.getElementById('panel-library').classList.remove('open');
+}
+
+function showStudyLobby() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-study').classList.add('active');
+}
+function backFromStudy() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-world').classList.add('active');
 }
 
 function setTimerPreset(minutes) {
