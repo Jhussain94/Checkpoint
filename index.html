@@ -11,6 +11,7 @@
   <meta name="description" content="Explore memories, music, unfinished thoughts, and creative fragments left by Camberwell students."/>
   <!-- Connects the CSS file for styling -->
   <link rel="stylesheet" href="css/styles.css"/>
+  <link rel="stylesheet" href="css/your-drops.css"/>
 </head>
 <body>
 
@@ -560,6 +561,9 @@
     <!-- Invisible hit-target over the illustrated "← back to map" text -->
     <button id="leave-page-back" onclick="backToMap()" aria-label="Back to map"></button>
 
+    <!-- View gallery — hand-drawn pill (page 2) -->
+    <button id="leave-page-view-drops" type="button" onclick="openYourDropsPage()" aria-label="View your drops">your drops →</button>
+
     <!-- Invisible overlays — illustration provides all visual UI.
          #leave-page-form covers the whole dashed box; children are placed
          over the exact illustrated elements. -->
@@ -584,6 +588,71 @@
       <button class="lp-success-board" onclick="backToMap(); openNoticeBoard();">📋 See the Notice Board</button>
     </div>
 
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN — YOUR DROPS (Leave a Drop Part 2)
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-your-drops">
+  <div id="yd-wrap">
+    <img id="yd-bg"
+         src="img/Leave%20a%20Drop/Leave%20a%20drop%20PART%202.png"
+         alt="Your drops"/>
+
+    <button type="button" id="yd-back" onclick="backToMap()" aria-label="Back to map"></button>
+
+    <div id="yd-ui">
+      <div class="yd-top-right">
+        <label class="yd-sort-wrap">
+          sort by:
+          <select id="yd-sort-select" aria-label="Sort by">
+            <option value="newest">newest</option>
+            <option value="oldest">oldest</option>
+          </select>
+        </label>
+        <div class="yd-filter-wrap">
+          <button type="button" id="yd-filter-btn" aria-label="Filter">filter ▾</button>
+          <div id="yd-filter-popup" hidden>
+            <button type="button" class="yd-filter-chip" data-ftype="images">images</button>
+            <button type="button" class="yd-filter-chip" data-ftype="videos">videos</button>
+            <button type="button" class="yd-filter-chip" data-ftype="audio">audio</button>
+            <button type="button" class="yd-filter-chip" data-ftype="playlists">playlists</button>
+          </div>
+        </div>
+      </div>
+
+      <header class="yd-header">
+        <h1 class="yd-title">your drops</h1>
+      </header>
+
+      <nav class="yd-tabs" aria-label="Categories">
+        <button type="button" class="yd-tab active" data-tab="all">all</button>
+        <button type="button" class="yd-tab" data-tab="songs">songs</button>
+        <button type="button" class="yd-tab" data-tab="playlists">playlists</button>
+        <button type="button" class="yd-tab" data-tab="films">films</button>
+        <button type="button" class="yd-tab" data-tab="memes">memes</button>
+        <button type="button" class="yd-tab" data-tab="clips">clips</button>
+      </nav>
+
+      <div id="yd-grid" aria-live="polite"></div>
+      <div id="yd-pagination"></div>
+
+      <section class="yd-collections-section" aria-label="Saved collections">
+        <div class="yd-collections-header">
+          <div>
+            <div class="yd-collections-title-wrap">
+              <h2 class="yd-collections-title">saved collections</h2>
+            </div>
+            <p class="yd-collections-sub">your favourite drops, all in one place</p>
+          </div>
+          <button type="button" id="yd-new-collection-btn">+ new collection</button>
+        </div>
+        <hr class="yd-collections-divider"/>
+        <div id="yd-collections-row"></div>
+      </section>
+    </div>
   </div>
 </div>
 
@@ -732,6 +801,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="js/game.js"></script>
 <script src="js/drops.js"></script>
+<script src="js/your-drops.js"></script>
 <script src="js/app.js"></script>
 
 </body>

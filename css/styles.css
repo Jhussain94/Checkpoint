@@ -371,6 +371,13 @@ html, body {
   justify-content: center;
 }
 
+#screen-world.active {
+  display: flex;
+  pointer-events: auto;
+  visibility: visible;
+  z-index: 1;
+}
+
 /* Same aspect-ratio lock as arrival and leave-drop */
 #world-img-wrap {
   position: relative;
@@ -1110,6 +1117,21 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 40;
+}
+
+#screen-leave-page:not(.active) {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  z-index: -1 !important;
+}
+
+#screen-leave-page.active {
+  display: flex;
+  pointer-events: auto;
+  visibility: visible;
+  z-index: 40;
 }
 
 /* Same aspect-ratio lock as the other two screens. */

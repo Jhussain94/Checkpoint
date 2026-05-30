@@ -801,6 +801,7 @@ function wireEvents() {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (document.getElementById('screen-study').classList.contains('active')) { backFromStudy(); return; }
+      if (document.getElementById('screen-your-drops').classList.contains('active')) { backToMap(); return; }
       if (document.getElementById('screen-leave-page').classList.contains('active')) { backToMap(); return; }
       if (leaveOpen)        closeLeaveForm();
       else if (activeDrop)  closeDrop();
@@ -1047,6 +1048,11 @@ function showCameraScreen() {
 function backFromCamera() {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-world').classList.add('active');
+  currentScreen = 'world';
+  Object.keys(mapKeys).forEach(k => { delete mapKeys[k]; });
+  if (document.activeElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+  }
 }
 
 function ccTriggerUpload() {
@@ -1303,11 +1309,29 @@ function showLeaveDropPage() {
   document.getElementById('leave-page-success').style.display = 'none';
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-leave-page').classList.add('active');
+  currentScreen = 'leave-page';
 }
 
 function backToMap() {
+  if (typeof YourDrops !== 'undefined' && typeof YourDrops.closePage === 'function') {
+    YourDrops.closePage();
+  }
+
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-world').classList.add('active');
+
+  const world = document.getElementById('screen-world');
+  if (world) world.classList.add('active');
+
+  currentScreen = 'world';
+
+  // Clear stale keyboard state so movement works immediately
+  Object.keys(mapKeys).forEach(k => { delete mapKeys[k]; });
+  mapBoyTarget = null;
+  mapBoyArrivalCb = null;
+
+  if (document.activeElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+  }
 }
 
 function selectLpMood(mood) {
@@ -1328,6 +1352,7 @@ async function submitLeavePageDrop() {
   else if (/\.(jpe?g|png|gif|webp)$/i.test(raw))                   { type = 'photo'; }
 
   await _saveLpDrop(type, content);
+  if (typeof YourDrops !== 'undefined') YourDrops.addFromUrl(raw);
 }
 
 
