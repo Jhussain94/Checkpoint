@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Tells the browser what type of HTML this is -->
+  <meta charset="UTF-8"/>
+  <!-- Makes the website responsive on phones/tablets -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+   <!-- Title shown on browser tab -->
+  <title>CHECKPOINT — A digital archive by Camberwell students</title>
+   <!-- Short description for search engines -->
+  <meta name="description" content="Explore memories, music, unfinished thoughts, and creative fragments left by Camberwell students."/>
+  <!-- Connects the CSS file for styling -->
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN 1 — ARRIVAL (loading + start merged into one screen)
+     The illustration is shown immediately.
+     A loading bar overlay fades out after ~2.5 s.
+     Only then does the START button become active — no auto-advance.
+────────────────────────────────────────────────────────────────── -->
+<div class="screen active" id="screen-arrival">
+
+  <!-- Image wrapper — JS sizes & centres the image precisely -->
+  <div id="arrival-img-wrap">
+    <img id="arrival-scene"
+         src="img/Loading%20Screen%20Finish.png"
+         alt="Checkpoint campus"/>
+
+    <!-- Invisible hotspot: disabled until loading finishes, then JS enables it -->
+    <button id="start-btn"
+            aria-label="Enter the world"
+            disabled
+            onclick="transitionTo('world')">
+    </button>
+
+    <!-- Boy walk — wrapper clips; each img shifted so character stays centred -->
+    <div id="boy-wrap" aria-hidden="true">
+      <img class="boy-frame" id="boy-f1" src="img/Boy%20Walking%201.png"/>
+      <img class="boy-frame" id="boy-f2" src="img/Boy%20Walking%202.png"/>
+      <img class="boy-frame" id="boy-f3" src="img/Boy%20Walking%203.png"/>
+    </div>
+
+    <!-- Falling leaves from the tree canopy (arrival screen only) -->
+    <div id="falling-leaves" aria-hidden="true"></div>
+
+    <div id="sparkle-container"></div>
+  </div>
+
+  <!-- Loading bar sits on top; fades out when ready -->
+  <div id="loading-overlay">
+    <div class="loading-track">
+      <div class="loading-fill" id="loading-fill"></div>
+    </div>
+    <p class="loading-text" id="loading-text">Waking up the campus...</p>
+  </div>
+
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN 3 — WORLD MAP
+     SVG campus map with 5 zones and glowing checkpoint dots.
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-world">
+
+  <!-- Framed wrapper — same border/shadow as the loading screen -->
+  <div id="world-img-wrap">
+    <img id="map-bg" src="img/page%202/Map%20Page%202.png" alt="Campus map"/>
+
+    <!-- Walking boy avatar — controlled by WASD or click -->
+    <div id="map-boy">
+      <img class="map-frame" id="map-f1" src="img/Boy%20Walking%201.png" alt=""/>
+      <img class="map-frame" id="map-f2" src="img/Boy%20Walking%202.png" alt=""/>
+      <img class="map-frame" id="map-f3" src="img/Boy%20Walking%203.png" alt=""/>
+    </div>
+
+    <!-- Clickable zone hotspots overlaid on the map PNG -->
+    <!-- Canvas easel — bottom-left wooden stand -->
+    <button class="map-zone-btn" id="zone-canvas-btn"
+            style="left:10%;top:74%"
+            onclick="openCanvasRoom()"
+            aria-label="Open Blank Canvas">
+      <span class="mzb-dot"></span>
+      <span class="mzb-label">🎨 Canvas</span>
+    </button>
+
+    <!-- Library building — left side, LIBRARY sign -->
+    <button class="map-zone-btn" id="zone-library-btn"
+            style="left:14%;top:44%"
+            onclick="openLibrary()"
+            aria-label="Open Library Timer">
+      <span class="mzb-dot"></span>
+      <span class="mzb-label">📚 Library</span>
+    </button>
+
+    <!-- Picnic blanket — vinyl disc + film tape, top right → Leave a Drop -->
+    <button class="map-zone-btn mzb-drop" id="zone-picnic-btn"
+            style="left:82%;top:31%"
+            onclick="openLeaveFromPicnic()"
+            aria-label="Leave a Drop">
+      <span class="mzb-dot"></span>
+      <span class="mzb-label">✏️ Leave a drop</span>
+    </button>
+
+    <!-- Green notice board — centre of map → show student notes -->
+    <button class="map-zone-btn mzb-board" id="zone-board-btn"
+            style="left:43%;top:52%"
+            onclick="openNoticeBoard()"
+            aria-label="Open Notice Board">
+      <span class="mzb-dot"></span>
+      <span class="mzb-label">📋 Notice Board</span>
+    </button>
+
+    <!-- Camera on tripod — upper centre → Camera Compass (photo links) -->
+    <button class="map-zone-btn mzb-camera" id="zone-camera-btn"
+            style="left:50%;top:28%"
+            onclick="openCameraCompass()"
+            aria-label="Open Camera Compass">
+      <span class="mzb-dot"></span>
+      <span class="mzb-label">📷 Camera Compass</span>
+    </button>
+
+    <!-- Map page nature decor — sparse grass & flowers on empty green only -->
+    <div id="map-flowers" aria-hidden="true">
+      <!-- Top-left grass -->
+      <img class="map-deco map-grass map-top sway-c" src="img/page%202/grass.png" alt="" style="left:8%;top:19%;animation-duration:7s;animation-delay:0.4s"/>
+      <img class="map-deco map-flower map-yellow map-top sway-a" src="img/page%202/Yellow%20Flowers.png" alt="" style="left:4%;top:23%;animation-duration:8s;animation-delay:0s"/>
+      <!-- Top-middle grass flanking camera -->
+      <img class="map-deco map-flower map-white map-top sway-b" src="img/page%202/Flower.png" alt="" style="left:34%;top:22%;animation-duration:7.4s;animation-delay:1.8s"/>
+      <img class="map-deco map-flower map-yellow map-top sway-a" src="img/page%202/Yellow%20Flowers.png" alt="" style="left:63%;top:21%;animation-duration:6.8s;animation-delay:1.2s"/>
+      <!-- Top-right grass near picnic -->
+      <img class="map-deco map-grass map-top sway-b" src="img/page%202/grass.png" alt="" style="left:75%;top:21%;animation-duration:8.2s;animation-delay:2.2s"/>
+      <img class="map-deco map-flower map-white map-top sway-c" src="img/page%202/Flower.png" alt="" style="left:87%;top:19%;animation-duration:7.6s;animation-delay:0.3s"/>
+      <!-- Left side empty grass -->
+      <img class="map-deco map-grass sway-a" src="img/page%202/grass.png" alt="" style="left:2%;top:53%;animation-duration:7.8s;animation-delay:1.6s"/>
+      <!-- Right side empty grass -->
+      <img class="map-deco map-grass sway-b" src="img/page%202/grass.png" alt="" style="left:93%;top:44%;animation-duration:7.2s;animation-delay:1.4s"/>
+      <!-- Bottom foreground grass -->
+      <img class="map-deco map-flower map-yellow sway-b" src="img/page%202/Yellow%20Flowers.png" alt="" style="left:24%;bottom:3%;animation-duration:8.4s;animation-delay:2s"/>
+      <img class="map-deco map-grass sway-c" src="img/page%202/grass.png" alt="" style="left:39%;bottom:4%;animation-duration:6.5s;animation-delay:0.8s"/>
+      <img class="map-deco map-flower map-white sway-a" src="img/page%202/Flower.png" alt="" style="left:52%;bottom:3%;animation-duration:8.2s;animation-delay:2.4s"/>
+      <img class="map-deco map-flower map-yellow sway-b" src="img/page%202/Yellow%20Flowers.png" alt="" style="left:73%;bottom:4%;animation-duration:7s;animation-delay:1s"/>
+    </div>
+
+    <!-- HTML overlay: title sits above the map -->
+    <div id="world-overlay">
+      <div id="world-title-block">
+        <div class="world-title">CHECKPOINT</div>
+        <div class="world-subtitle">A digital archive by Camberwell students</div>
+      </div>
+      <button id="vol-toggle" onclick="toggleMapAudio()" aria-label="Toggle music" title="Toggle music">🔊</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — GENERIC ZONE (garden / workshop / forest / corner)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-zone" role="region" aria-label="Zone drops">
+  <div class="zone-panel-top">
+    <div>
+      <div class="zone-panel-heading" id="zone-panel-title"></div>
+      <div class="zone-panel-desc"    id="zone-panel-desc"></div>
+    </div>
+    <button class="panel-close-btn" onclick="closeZonePanel()" aria-label="Close">✕</button>
+  </div>
+  <div class="zone-cards-grid" id="zone-cards-grid"></div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     MODAL — DROP DETAIL
+     Slides up when a checkpoint dot is clicked.
+────────────────────────────────────────────────────────────────── -->
+<div id="modal-drop" role="dialog" aria-modal="true" aria-label="Drop detail">
+  <div class="drop-panel">
+    <div class="drag-handle"></div>
+
+    <div class="drop-row-top">
+      <span class="drop-found-label" id="drop-found-label">📍 Drop Found</span>
+      <button class="drop-close" onclick="closeDrop()" aria-label="Close">✕</button>
+    </div>
+
+    <div class="drop-content" id="drop-content-inner">
+      <!-- rendered by JS -->
+    </div>
+
+    <p class="drop-caption" id="drop-caption"></p>
+
+    <div class="drop-footer">
+      <span class="mood-tag" id="drop-mood">peaceful</span>
+      <span class="sep">·</span>
+      <span class="drop-username" id="drop-username">anonymous student</span>
+      <span class="sep">·</span>
+      <span class="drop-timestamp" id="drop-timestamp"></span>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     MODAL — LEAVE A DROP
+     Form to contribute a new drop to the archive.
+────────────────────────────────────────────────────────────────── -->
+<div id="modal-leave" role="dialog" aria-modal="true" aria-label="Leave a drop">
+  <div class="leave-panel">
+    <div class="drag-handle"></div>
+
+    <div class="leave-header">
+      <div class="leave-title"><span>✏️</span> Leave a drop</div>
+      <button class="drop-close" onclick="closeLeaveForm()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Form -->
+    <div id="leave-form-wrap">
+
+      <div class="form-group">
+        <label class="form-label" for="drop-url">Spotify / YouTube link <span style="opacity:.5;font-weight:400">(optional)</span></label>
+        <input class="form-input" id="drop-url" type="url"
+               placeholder="https://open.spotify.com/track/…"/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="drop-message">Write something <span style="opacity:.5;font-weight:400">(optional if link provided)</span></label>
+        <textarea class="form-textarea" id="drop-message" maxlength="200"
+                  placeholder="A song that got you through deadline week. A memory. A thought you never said out loud…"></textarea>
+        <div class="char-count" id="char-count">0 / 200</div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Where does this belong?</label>
+        <div class="chip-row" id="area-chips">
+          <!-- built by JS -->
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Mood</label>
+        <div class="chip-row" id="mood-chips">
+          <!-- built by JS -->
+        </div>
+      </div>
+
+      <div class="form-group">
+        <div class="anon-row">
+          <input type="checkbox" id="anon-check" checked/>
+          <label for="anon-check">Stay anonymous</label>
+        </div>
+        <div id="name-field-wrap" style="display:none; margin-top:8px">
+          <input class="form-input" id="drop-name" type="text"
+                 placeholder="Your name or a nickname"/>
+        </div>
+      </div>
+
+      <button class="submit-btn" onclick="submitDrop()">Drop it into the world →</button>
+    </div>
+
+    <!-- Success state -->
+    <div id="leave-success">
+      <div class="success-icon">✨</div>
+      <div class="success-title">Drop left behind.</div>
+      <p class="success-text">
+        Your fragment is now part of the world.<br/>
+        Someone will find it — maybe today, maybe years from now.
+      </p>
+      <button class="success-back" onclick="closeLeaveForm()">Back to the map</button>
+      <button class="success-board" onclick="closeLeaveForm(); openNoticeBoard();">📋 See it on the Notice Board</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — MEDIA MEADOW (full zone detail)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-meadow" role="region" aria-label="Media Meadow">
+  <div class="meadow-top">
+    <div>
+      <div class="meadow-heading">🎵 Media Meadow</div>
+      <div class="meadow-desc">Songs, playlists, and videos left by students who needed music most.</div>
+    </div>
+    <button class="panel-close-btn" onclick="closeMeadow()" aria-label="Close Media Meadow">✕</button>
+  </div>
+  <div class="music-grid" id="meadow-grid">
+    <!-- populated by JS -->
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — CAMERA COMPASS (photo links / Instagram)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-camera" role="dialog" aria-modal="true" aria-label="Camera Compass">
+  <div class="camera-panel-inner">
+    <div class="camera-panel-header">
+      <div class="camera-panel-title">📷 Camera Compass</div>
+      <button class="panel-close-btn cam-close" onclick="closeCameraCompass()" aria-label="Close">✕</button>
+    </div>
+    <p class="camera-panel-sub">Photos and moments shared by Camberwell students.</p>
+
+    <!-- Submit a link -->
+    <div class="camera-submit-row">
+      <input class="form-input cam-input" id="camera-link-input" type="url"
+             placeholder="Instagram, Behance, VSCO, or photo URL…"/>
+      <input class="form-input cam-input" id="camera-caption-input" type="text"
+             placeholder="Caption (optional)" maxlength="100"/>
+      <button class="camera-submit-btn" onclick="submitCameraLink()">📌 Pin it</button>
+    </div>
+
+    <!-- Upload a selfie / photo -->
+    <div class="cam-selfie-divider">— or upload a photo —</div>
+    <div class="cam-selfie-row">
+      <input type="file" id="cam-file-input" accept="image/*" style="display:none"
+             onchange="handleCameraUpload(this)"/>
+      <button class="camera-submit-btn cam-selfie-btn"
+              onclick="document.getElementById('cam-file-input').click()">📸 Choose Photo</button>
+      <input class="form-input cam-input" id="cam-selfie-caption" type="text"
+             placeholder="Caption (optional)" maxlength="100"/>
+    </div>
+    <div id="cam-upload-preview" class="cam-preview-wrap">
+      <img id="cam-preview-img" class="cam-preview-img" alt="Preview"/>
+      <button class="camera-submit-btn cam-pin-btn" onclick="submitSelfie()">
+        📌 Pin to Notice Board
+      </button>
+    </div>
+
+    <!-- Grid of submitted photo links -->
+    <div class="camera-grid" id="camera-grid">
+      <!-- populated by JS -->
+    </div>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — NOTICE BOARD (kept for legacy JS references)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-noticeboard" style="display:none" aria-hidden="true"></div>
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN — NOTICE BOARD
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-noticeboard">
+  <div id="nb-wrap">
+
+    <img id="nb-bg" src="img/Notice%20Board/Notice%20Board.png" alt="Notice Board"/>
+
+    <!-- Back to map -->
+    <button id="nb-back" onclick="closeNoticeBoard()" aria-label="Back to map"></button>
+
+    <!-- 6 sticky-note drop slots (populated by JS) -->
+    <div class="nb-slot" id="nb-slot-0"></div>
+    <div class="nb-slot" id="nb-slot-1"></div>
+    <div class="nb-slot" id="nb-slot-2"></div>
+    <div class="nb-slot" id="nb-slot-3"></div>
+    <div class="nb-slot" id="nb-slot-4"></div>
+    <div class="nb-slot" id="nb-slot-5"></div>
+
+    <!-- Write a note — overlaid on the illustrated card -->
+    <textarea id="nb-note-input"
+              maxlength="200"
+              placeholder="leave a thought…"></textarea>
+    <button   id="nb-post-btn"
+              onclick="submitNoticeBoardNote()"></button>
+
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — BLANK CANVAS (drawing room)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-canvas" role="dialog" aria-modal="true" aria-label="Blank Canvas">
+  <div class="canvas-panel-inner">
+    <div class="canvas-panel-header">
+      <div class="canvas-panel-title">🎨 Blank Canvas</div>
+      <button class="panel-close-btn" onclick="closeCanvasRoom()" aria-label="Close">✕</button>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="canvas-toolbar" id="canvas-toolbar">
+      <button class="tool-btn active" id="tool-pen"    onclick="setTool('pen')"    title="Pen">✏️</button>
+      <button class="tool-btn"        id="tool-eraser" onclick="setTool('eraser')" title="Eraser">⬜</button>
+      <button class="tool-btn"        id="tool-text"   onclick="setTool('text')"   title="Add text">T</button>
+
+      <div class="toolbar-sep"></div>
+
+      <!-- Brush size -->
+      <input type="range" id="brush-size" min="2" max="40" value="6" title="Brush size"
+             oninput="updateBrushSize(this.value)"/>
+
+      <div class="toolbar-sep"></div>
+
+      <!-- Colour swatches -->
+      <div class="color-swatches" id="color-swatches">
+        <div class="swatch selected" style="--c:#2a1a04" data-color="#2a1a04" onclick="setColor('#2a1a04')"></div>
+        <div class="swatch" style="--c:#e05a2a" data-color="#e05a2a" onclick="setColor('#e05a2a')"></div>
+        <div class="swatch" style="--c:#e8c242" data-color="#e8c242" onclick="setColor('#e8c242')"></div>
+        <div class="swatch" style="--c:#4a9a4a" data-color="#4a9a4a" onclick="setColor('#4a9a4a')"></div>
+        <div class="swatch" style="--c:#4a80c8" data-color="#4a80c8" onclick="setColor('#4a80c8')"></div>
+        <div class="swatch" style="--c:#9a4ac8" data-color="#9a4ac8" onclick="setColor('#9a4ac8')"></div>
+        <div class="swatch" style="--c:#e84a8a" data-color="#e84a8a" onclick="setColor('#e84a8a')"></div>
+        <div class="swatch" style="--c:#f8f0d8" data-color="#f8f0d8" onclick="setColor('#f8f0d8')"></div>
+        <input type="color" id="custom-color" title="Custom colour" value="#2a1a04"
+               oninput="setColor(this.value)" style="width:28px;height:28px;border:none;border-radius:50%;cursor:pointer;padding:0"/>
+      </div>
+
+      <div class="toolbar-sep"></div>
+      <button class="tool-btn tool-clear" onclick="clearCanvas()" title="Clear all">🗑</button>
+    </div>
+
+    <!-- The drawing surface -->
+    <canvas id="drawing-canvas"></canvas>
+
+    <!-- Floating text input (appears on canvas click in text mode) -->
+    <input id="canvas-text-input" type="text" placeholder="Type something…"
+           style="display:none; color:#2a1a04"/>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     PANEL — LIBRARY TIMER (focus / study room)
+────────────────────────────────────────────────────────────────── -->
+<div id="panel-library" role="dialog" aria-modal="true" aria-label="Library Study Timer">
+  <div class="library-panel-inner">
+    <div class="library-panel-header">
+      <div class="library-panel-title">📚 Library</div>
+      <button class="panel-close-btn" onclick="closeLibrary()" aria-label="Close">✕</button>
+    </div>
+
+    <p class="library-subtitle">Set a timer. Work in silence.</p>
+
+    <!-- Clock display -->
+    <div class="timer-display" id="timer-display">00:00:00</div>
+
+    <!-- Preset buttons -->
+    <div class="timer-presets">
+      <button class="preset-btn" onclick="setTimerPreset(25)">25 min</button>
+      <button class="preset-btn" onclick="setTimerPreset(45)">45 min</button>
+      <button class="preset-btn" onclick="setTimerPreset(60)">1 hr</button>
+      <button class="preset-btn" onclick="setTimerPreset(90)">1.5 hr</button>
+    </div>
+
+    <!-- Custom input -->
+    <div class="timer-inputs">
+      <div class="time-input-group">
+        <input type="number" id="t-hours"   min="0" max="23" value="0" placeholder="HH"/>
+        <label>h</label>
+      </div>
+      <div class="time-input-group">
+        <input type="number" id="t-minutes" min="0" max="59" value="25" placeholder="MM"/>
+        <label>m</label>
+      </div>
+      <div class="time-input-group">
+        <input type="number" id="t-seconds" min="0" max="59" value="0" placeholder="SS"/>
+        <label>s</label>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="timer-controls">
+      <button class="timer-btn timer-start"  id="timer-start-btn"  onclick="toggleTimer()">▶ Start</button>
+      <button class="timer-btn timer-reset"  onclick="resetTimer()">↺ Reset</button>
+    </div>
+
+    <p class="timer-note" id="timer-note"></p>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN 3 — STUDY LOBBY (illustrated page)
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-study">
+  <div id="study-img-wrap">
+    <img id="study-bg"
+         src="img/Study%20Group/Study%20Lobby.png"
+         alt="Study Lobby"/>
+
+    <!-- Transparent back button over illustrated "< back to map" -->
+    <button id="study-back" onclick="backFromStudy()" aria-label="Back to map"></button>
+
+    <!-- Transparent hit-target over the illustrated green "start" button -->
+    <button id="study-start-btn" onclick="openStudyTimerModal()" aria-label="Start timer"></button>
+
+    <!-- Countdown overlay — shown when timer is running -->
+    <div id="study-timer-display">
+      <div id="study-timer-count">00:00</div>
+      <button id="study-timer-stop" onclick="stopStudyTimer()" aria-label="Stop timer">■ Stop</button>
+    </div>
+
+    <!-- Music selector — below the timer card -->
+    <div id="study-music-picker">
+      <button class="study-music-btn" data-track="ink-rain"   onclick="playStudyMusic('ink-rain')">Ink Rain</button>
+      <button class="study-music-btn" data-track="petals"     onclick="playStudyMusic('petals')">Petals</button>
+      <button class="study-music-btn" data-track="tokyo-cafe" onclick="playStudyMusic('tokyo-cafe')">Tokyo Cafe</button>
+      <button class="study-music-btn" id="study-music-off"    onclick="stopStudyMusic()">Off</button>
+    </div>
+  </div>
+</div>
+
+<!-- Study timer duration picker modal -->
+<div id="study-timer-modal" role="dialog" aria-modal="true" aria-label="Set study timer">
+  <div id="study-timer-panel">
+    <div id="study-timer-title">⏱ How long will you study?</div>
+    <div id="study-dur-presets">
+      <button class="study-dur-btn" data-min="25"  onclick="selectStudyDur(this)">25 min</button>
+      <button class="study-dur-btn" data-min="45"  onclick="selectStudyDur(this)">45 min</button>
+      <button class="study-dur-btn" data-min="60"  onclick="selectStudyDur(this)">60 min</button>
+      <button class="study-dur-btn" data-min="90"  onclick="selectStudyDur(this)">90 min</button>
+    </div>
+    <input id="study-custom-min" type="number" min="0.5" max="300" step="0.5"
+           placeholder="Custom minutes (0.5 = 30 sec)"/>
+    <div id="study-timer-actions">
+      <button id="study-timer-cancel"  onclick="cancelStudyTimerModal()">Cancel</button>
+      <button id="study-timer-confirm" onclick="confirmStudyTimer()">Start</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN 4 — LEAVE A DROP (illustrated page)
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-leave-page">
+  <div id="leave-page-wrap">
+
+    <!-- Full-bleed illustrated background -->
+    <img id="leave-page-bg"
+         src="img/Leave%20a%20Drop/Leave%20a%20Drop%20(2).png"
+         alt="Leave a drop"/>
+
+    <!-- Invisible hit-target over the illustrated "← back to map" text -->
+    <button id="leave-page-back" onclick="backToMap()" aria-label="Back to map"></button>
+
+    <!-- Invisible overlays — illustration provides all visual UI.
+         #leave-page-form covers the whole dashed box; children are placed
+         over the exact illustrated elements. -->
+    <div id="leave-page-form">
+
+      <!-- Inline input sits over the illustrated white rectangle -->
+      <input id="lp-url-input" type="text"
+             placeholder="Paste a TikTok, YouTube, Spotify link..."
+             onkeydown="if(event.key==='Enter') submitLeavePageDrop()"/>
+
+      <!-- Green drop it button -->
+      <button class="lp-drop-btn" onclick="submitLeavePageDrop()" aria-label="Drop it"></button>
+
+    </div>
+
+    <!-- Success state — swaps in after submit -->
+    <div id="leave-page-success">
+      <div class="lp-success-icon">✨</div>
+      <div class="lp-success-title">Drop left behind.</div>
+      <p class="lp-success-sub">Your fragment is now part of the world.</p>
+      <button class="lp-success-back"  onclick="backToMap()">← back to map</button>
+      <button class="lp-success-board" onclick="backToMap(); openNoticeBoard();">📋 See the Notice Board</button>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Toast notification -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN 5 — CAMPUS CAMERA
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-camera">
+  <div id="cc-wrap">
+
+    <img id="cc-bg" src="img/Campus%20Camera/Campus%20Camera.png" alt="Campus Camera"/>
+
+    <!-- Back to map hit-target -->
+    <button id="cc-back" onclick="backFromCamera()" aria-label="Back to map"></button>
+
+    <!-- "Choose a file" hit-target over the illustrated button -->
+    <button id="cc-upload-btn" onclick="ccTriggerUpload()" aria-label="Upload photo"></button>
+    <input type="file" id="cc-file-input" accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+           style="display:none" onchange="ccHandleUpload(this)">
+    <p id="cc-upload-status" aria-live="polite"></p>
+
+    <!-- Photo slots — absolute over 2048×1447 background, clipped to inner frames -->
+    <div id="cc-grid" class="campus-camera-section"></div>
+
+  </div>
+</div>
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN 6 — CANVAS ROOM
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-canvas">
+  <div id="cv-wrap">
+
+    <!-- ── Toolbar ── -->
+    <div id="cv-toolbar">
+
+      <button id="cv-back" onclick="backFromCanvas()">← Map</button>
+
+      <div class="cv-divider"></div>
+
+      <!-- Drawing tools -->
+      <div class="cv-group">
+        <button class="cv-tool-btn active" data-tool="pencil"     onclick="cvSetTool('pencil')"     title="Pencil">✏️</button>
+        <button class="cv-tool-btn"        data-tool="pen"        onclick="cvSetTool('pen')"        title="Ink Pen">🖊</button>
+        <button class="cv-tool-btn"        data-tool="brush"      onclick="cvSetTool('brush')"      title="Brush">🖌️</button>
+        <button class="cv-tool-btn"        data-tool="marker"     onclick="cvSetTool('marker')"     title="Marker">🖍️</button>
+        <button class="cv-tool-btn"        data-tool="highlighter"onclick="cvSetTool('highlighter')"title="Highlighter">🌟</button>
+        <button class="cv-tool-btn"        data-tool="eraser"     onclick="cvSetTool('eraser')"     title="Eraser">◻</button>
+        <button class="cv-tool-btn"        data-tool="text"       onclick="cvSetTool('text')"       title="Text Box">T</button>
+      </div>
+
+      <div class="cv-divider"></div>
+
+      <!-- Color swatches + custom picker -->
+      <div class="cv-group" id="cv-swatches">
+        <button class="cv-swatch active" style="background:#222"    onclick="cvSetColor('#222222')"></button>
+        <button class="cv-swatch"        style="background:#fff"    onclick="cvSetColor('#ffffff')"></button>
+        <button class="cv-swatch"        style="background:#e8504a" onclick="cvSetColor('#e8504a')"></button>
+        <button class="cv-swatch"        style="background:#f07d3c" onclick="cvSetColor('#f07d3c')"></button>
+        <button class="cv-swatch"        style="background:#f5c518" onclick="cvSetColor('#f5c518')"></button>
+        <button class="cv-swatch"        style="background:#4caf70" onclick="cvSetColor('#4caf70')"></button>
+        <button class="cv-swatch"        style="background:#4a90d9" onclick="cvSetColor('#4a90d9')"></button>
+        <button class="cv-swatch"        style="background:#9b67c8" onclick="cvSetColor('#9b67c8')"></button>
+        <button class="cv-swatch"        style="background:#f06292" onclick="cvSetColor('#f06292')"></button>
+        <button class="cv-swatch"        style="background:#8b5e3c" onclick="cvSetColor('#8b5e3c')"></button>
+        <input  type="color" id="cv-color-picker" value="#222222" title="Custom colour" onchange="cvSetColor(this.value)">
+      </div>
+
+      <div class="cv-divider"></div>
+
+      <!-- Brush size -->
+      <div class="cv-group cv-size-group">
+        <span class="cv-size-label">Size</span>
+        <input type="range" id="cv-size" min="1" max="50" value="4" oninput="cvUpdateSize(this.value)">
+        <span id="cv-size-val">4</span>
+      </div>
+
+      <div class="cv-divider"></div>
+
+      <!-- Actions -->
+      <div class="cv-group">
+        <button class="cv-action-btn" onclick="cvAddImage()"  title="Add image / meme">🖼️</button>
+        <button class="cv-action-btn" onclick="cvEmail()"     title="Download &amp; email">📧</button>
+        <button class="cv-action-btn" onclick="cvClear()"     title="Clear canvas">🗑️</button>
+      </div>
+    </div>
+
+    <!-- ── Drawing canvas ── -->
+    <canvas id="cv-canvas"
+            ondragover="event.preventDefault()"
+            ondrop="cvDropImage(event)"></canvas>
+
+    <!-- ── Floating image (move + resize before committing) ── -->
+    <div id="cv-img-float" style="display:none">
+      <img id="cv-img-float-el" alt="" draggable="false">
+      <div class="cv-hdot cv-hdot-nw" data-handle="nw"></div>
+      <div class="cv-hdot cv-hdot-ne" data-handle="ne"></div>
+      <div class="cv-hdot cv-hdot-sw" data-handle="sw"></div>
+      <div class="cv-hdot cv-hdot-se" data-handle="se"></div>
+      <div class="cv-float-bar">
+        <button onclick="cvCommitImage()">✓ Place</button>
+        <button onclick="cvCancelImage()">✕</button>
+      </div>
+    </div>
+
+    <!-- ── Floating text box (drag, resize, commit) ── -->
+    <div id="cv-tbox" style="display:none">
+      <div id="cv-tbox-handle" title="Drag to move">⠿ drag</div>
+      <textarea id="cv-tbox-ta" placeholder="Type here…" spellcheck="false"></textarea>
+      <div class="cv-hdot cv-hdot-se" data-handle="se"></div>
+      <div class="cv-float-bar">
+        <button onclick="cvCommitTextbox()">✓ Place</button>
+        <button onclick="cvCancelTextbox()">✕</button>
+      </div>
+    </div>
+
+    <!-- ── Hidden file picker ── -->
+    <input type="file" id="cv-img-input" accept="image/*" style="display:none" onchange="cvLoadImageFile(this)">
+
+  </div>
+</div>
+
+
+
+<!-- Loading screen music -->
+<audio id="loading-audio" loop preload="auto">
+  <source src="sound/idoberg-summer-tropical-house-guitar-loop-357385.mp3" type="audio/mpeg"/>
+</audio>
+
+<!-- Map ambient audio -->
+<audio id="ambient-audio" loop preload="auto">
+  <source src="sound/First%20Bell%20Summer.mp3" type="audio/mpeg"/>
+</audio>
+
+<!-- Study lobby music -->
+<audio id="study-audio" loop preload="none"></audio>
+
+<!-- ── Scripts ──────────────────────────────────────────────── -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/firebase-interactive.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/game.js"></script>
+<script src="js/drops.js"></script>
+<script src="js/app.js"></script>
+
+</body>
+</html>
