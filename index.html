@@ -33,7 +33,7 @@
     <button id="start-btn"
             aria-label="Enter the world"
             disabled
-            onclick="transitionTo('nickname')">
+            onclick="transitionTo('world')">
     </button>
 
     <!-- Boy walk — wrapper clips; each img shifted so character stays centred -->
@@ -133,13 +133,13 @@
       <span class="mzb-label">📋 Notice Board</span>
     </button>
 
-    <!-- Camera on tripod — upper centre → Camera Compass (photo links) -->
+    <!-- Camera on tripod — upper centre → Campus Camera (photo links) -->
     <button class="map-zone-btn mzb-camera" id="zone-camera-btn"
             style="left:50%;top:28%"
             onclick="openCameraCompass()"
-            aria-label="Open Camera Compass">
+            aria-label="Open Campus Camera">
       <span class="mzb-dot"></span>
-      <span class="mzb-label">📷 Camera Compass</span>
+      <span class="mzb-label">📷 Campus Camera</span>
     </button>
 
     <!-- Map page nature decor — sparse grass & flowers on empty green only -->
@@ -314,10 +314,10 @@
 <!-- ──────────────────────────────────────────────────────────────
      PANEL — CAMERA COMPASS (photo links / Instagram)
 ────────────────────────────────────────────────────────────────── -->
-<div id="panel-camera" role="dialog" aria-modal="true" aria-label="Camera Compass">
+<div id="panel-camera" role="dialog" aria-modal="true" aria-label="Campus Camera">
   <div class="camera-panel-inner">
     <div class="camera-panel-header">
-      <div class="camera-panel-title">📷 Camera Compass</div>
+      <div class="camera-panel-title">📷 Campus Camera</div>
       <button class="panel-close-btn cam-close" onclick="closeCameraCompass()" aria-label="Close">✕</button>
     </div>
     <p class="camera-panel-sub">Photos and moments shared by Camberwell students.</p>
@@ -372,7 +372,7 @@
     <!-- Back to map -->
     <button id="nb-back" onclick="closeNoticeBoard()" aria-label="Back to map"></button>
 
-    <!-- 6 sticky-note drop slots (populated by JS) -->
+    <!-- Text overlaid on the 6 illustrated sticky notes -->
     <div class="nb-slot" id="nb-slot-0"></div>
     <div class="nb-slot" id="nb-slot-1"></div>
     <div class="nb-slot" id="nb-slot-2"></div>
@@ -380,12 +380,13 @@
     <div class="nb-slot" id="nb-slot-4"></div>
     <div class="nb-slot" id="nb-slot-5"></div>
 
-    <!-- Write a note — overlaid on the illustrated card -->
-    <textarea id="nb-note-input"
-              maxlength="200"
-              placeholder="leave a thought…"></textarea>
-    <button   id="nb-post-btn"
-              onclick="submitNoticeBoardNote()"></button>
+    <!-- Clip wrapper — hard-clips textarea to the illustrated white box -->
+    <div id="nb-input-clip">
+      <textarea id="nb-note-input"
+                maxlength="200"
+                placeholder="leave a thought…"></textarea>
+    </div>
+    <button id="nb-post-btn" onclick="submitNoticeBoardNote()"></button>
 
   </div>
 </div>
@@ -569,10 +570,12 @@
          over the exact illustrated elements. -->
     <div id="leave-page-form">
 
-      <!-- Inline input sits over the illustrated white rectangle -->
-      <input id="lp-url-input" type="text"
-             placeholder="Paste a TikTok, YouTube, Spotify link..."
-             onkeydown="if(event.key==='Enter') submitLeavePageDrop()"/>
+      <!-- Clip wrapper — hard-clips the input to the white rectangle boundary -->
+      <div id="lp-input-clip">
+        <input id="lp-url-input" type="text"
+               placeholder="Paste a TikTok, YouTube, Spotify link..."
+               onkeydown="if(event.key==='Enter') submitLeavePageDrop()"/>
+      </div>
 
       <!-- Green drop it button -->
       <button class="lp-drop-btn" onclick="submitLeavePageDrop()" aria-label="Drop it"></button>
@@ -792,6 +795,30 @@
 
 <!-- Study lobby music -->
 <audio id="study-audio" loop preload="none"></audio>
+
+<!-- ── Intro overlay — shown once after loading, remembered in localStorage ── -->
+<div id="intro-overlay" style="display:none">
+  <img class="intro-flower intro-fl-tl" src="img/yellow-flowers.png" alt="">
+  <img class="intro-flower intro-fl-tr" src="img/flower.png"         alt="">
+  <img class="intro-flower intro-fl-bl" src="img/flower.png"         alt="">
+  <img class="intro-flower intro-fl-br" src="img/yellow-flowers.png" alt="">
+
+  <div id="intro-card">
+    <div id="intro-icon">🌿</div>
+    <h1 id="intro-title">how it works</h1>
+    <div id="intro-rule"></div>
+    <ul id="intro-list">
+      <li>move your avatar with <strong>arrow keys</strong> or click anywhere on the map</li>
+      <li>walk up to a zone and click it to enter a different part of campus</li>
+      <li>📚 <strong>library</strong> — set a focus timer &amp; study with others</li>
+      <li>✏️ <strong>leave a drop</strong> — share a song, TikTok, or link</li>
+      <li>📋 <strong>notice board</strong> — read &amp; post anonymous notes</li>
+      <li>📷 <strong>campus camera</strong> — upload a photo to the board</li>
+      <li>🎨 <strong>canvas room</strong> — draw, write, and create freely</li>
+    </ul>
+    <button id="intro-btn" onclick="dismissIntro()">let's explore →</button>
+  </div>
+</div>
 
 <!-- ── Scripts ──────────────────────────────────────────────── -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>

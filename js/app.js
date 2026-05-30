@@ -35,6 +35,21 @@ document.addEventListener('DOMContentLoaded', () => {
   initFirebaseInteractive().catch(err => console.error('[Checkpoint] Firebase init error —', err.message));
 });
 
+// ── INTRO OVERLAY ─────────────────────────────────────────────
+function maybeShowIntro() {
+  if (localStorage.getItem('checkpoint_intro_v1')) return;
+  const el = document.getElementById('intro-overlay');
+  if (el) el.style.display = 'flex';
+}
+
+function dismissIntro() {
+  localStorage.setItem('checkpoint_intro_v1', '1');
+  const el = document.getElementById('intro-overlay');
+  if (!el) return;
+  el.classList.add('intro-fading');
+  setTimeout(() => { el.style.display = 'none'; el.classList.remove('intro-fading'); }, 520);
+}
+
 /** Start loading sequence once the arrival illustration is ready. */
 function bootArrivalScene() {
   const img = document.getElementById('arrival-scene');
@@ -87,7 +102,10 @@ function showScreen(id) {
   const el = document.getElementById('screen-' + id);
   if (el) { el.classList.add('active'); currentScreen = id; }
   if (id === 'nickname') prepNicknamePage();
-  if (id === 'world') setTimeout(() => { initMapBoy(); }, 80);
+  if (id === 'world') {
+    setTimeout(() => { initMapBoy(); }, 80);
+    setTimeout(() => { maybeShowIntro(); }, 400);
+  }
 }
 
 function transitionTo(id) {
@@ -827,6 +845,10 @@ function wireEvents() {
   const nbBack = document.getElementById('nb-back');
   if (nbBack) nbBack.addEventListener('click', () => closeNoticeBoard());
 
+  // Notice board post button — wired in JS so it always fires
+  const nbPost = document.getElementById('nb-post-btn');
+  if (nbPost) nbPost.addEventListener('click', () => submitNoticeBoardNote());
+
   // Post notice board note with Enter (Shift+Enter for newline)
   const nbInput = document.getElementById('nb-note-input');
   if (nbInput) {
@@ -1234,8 +1256,9 @@ async function submitSelfie() {
 // NOTICE BOARD
 // ══════════════════════════════════════════════════════════════════
 
-const SN_COLORS  = ['sn-yellow','sn-pink','sn-blue','sn-green','sn-orange'];
-const SN_ROTATES = [-3, -1.5, 0, 1.5, 3, -2.5, 2, -0.5];
+// Sticky note colour palette — cycles through notes
+const NB_COLORS  = ['col-green','col-yellow','col-pink','col-yellow','col-pink','col-blue'];
+const NB_ROTATES = [-2, 1.5, -1, 2, -1.5, 0.5, -0.5, 1, -2, 1];
 
 function openNoticeBoard() {
   buildNoticeBoardPins();
@@ -1244,55 +1267,88 @@ function openNoticeBoard() {
 }
 function closeNoticeBoard() {
   if (activeDrop) closeDrop();
-  showScreen('world');   // uses showScreen so initMapBoy() fires correctly
+  showScreen('world');
+}
+
+function _nbPreview(drop) {
+  // Returns a short readable label for any drop type
+  if (drop.type === 'song' || drop.type === 'playlist') return '🎵 ' + (drop.caption || 'a music drop');
+  if (drop.type === 'tiktok')  return '🎵 ' + (drop.caption || 'TikTok');
+  if (drop.type === 'video')   return '🎬 ' + (drop.caption || 'a video');
+  if (drop.type === 'photo')   return '📸 ' + (drop.caption || 'a photo');
+  if (drop.type === 'text') {
+    try {
+      return '🔗 ' + new URL(drop.content).hostname.replace('www.', '');
+    } catch {
+      const t = drop.content || '';
+      return t.length > 80 ? t.slice(0, 78) + '…' : t;
+    }
+  }
+  return drop.caption || drop.content || '';
 }
 
 function buildNoticeBoardPins() {
-  const notes = typeof getNoticeBoardNotes === 'function'
-    ? getNoticeBoardNotes()
-    : [];
+  // Gather up to 6 items — Firebase notes first, then ALL Supabase drops
+  let notes = [];
+
+  if (typeof getNoticeBoardNotes === 'function') {
+    notes = getNoticeBoardNotes()
+      .map(n => n.text || '')
+      .filter(Boolean)
+      .slice(0, 6);
+  }
+
+  if (!notes.length) {
+    // Include every drop type — Leave a Drop, photos, links, etc.
+    notes = getDrops()
+      .map(d => _nbPreview(d))
+      .filter(Boolean)
+      .slice(0, 6);
+  }
 
   for (let i = 0; i < 6; i++) {
     const slot = document.getElementById('nb-slot-' + i);
     if (!slot) continue;
-    const note = notes[i];
-
-    if (!note || !note.text) {
-      slot.innerHTML = '';
-      slot.onclick = null;
-      continue;
-    }
-
-    const text = note.text.length > 120 ? note.text.slice(0, 120) + '…' : note.text;
-    const date = parseFirestoreDate(note.createdAt);
-    const dateStr = date ? formatDate(date.toISOString()) : '';
-
-    slot.innerHTML =
-      `<div class="nb-slot-text">${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` +
-      (dateStr ? `<div class="nb-slot-date">${dateStr}</div>` : '');
-    slot.onclick = null;
+    if (!notes[i]) { slot.innerHTML = ''; continue; }
+    const safe = notes[i]
+      .replace(/&/g, '&amp;')
+      .replace(/</g,  '&lt;')
+      .replace(/>/g,  '&gt;');
+    slot.innerHTML = `<div class="nb-slot-text">${safe}</div>`;
   }
 }
 
 async function submitNoticeBoardNote() {
-  const inp = document.getElementById('nb-note-input');
-  const btn = document.getElementById('nb-post-btn');
+  const inp  = document.getElementById('nb-note-input');
+  const btn  = document.getElementById('nb-post-btn');
   const text = inp ? inp.value.trim() : '';
 
   if (!text) { showToast('Write something first ✏️'); return; }
-  if (text.length > 200) { showToast('Notes must be 200 characters or less'); return; }
-
-  if (btn) btn.disabled = true;
+  if (btn)   btn.disabled = true;
 
   try {
-    await saveNoticeBoardNote(text);
-    inp.value = '';
+    // Try Firebase first, fall back to Supabase
+    if (typeof saveNoticeBoardNote === 'function') {
+      await saveNoticeBoardNote(text);
+    } else {
+      const drop = {
+        id:        'nb' + Date.now(),
+        type:      'text',
+        content:   text,
+        caption:   null,
+        mood:      'peaceful',
+        area:      'corner',
+        timestamp: new Date().toISOString(),
+        username:  localStorage.getItem(USERNAME_KEY) || 'anonymous student',
+        position:  { x: 56 + Math.random() * 40, y: 56 + Math.random() * 28 },
+      };
+      await saveUserDrop(drop);
+    }
+    if (inp) inp.value = '';
+    buildNoticeBoardPins();     // immediately refresh the sticky notes
     showToast('📌 Note posted to the board!');
-    console.log('[Checkpoint] Notice Board note posted');
   } catch (err) {
-    const msg = err.message || 'Could not post note. Try again.';
-    console.error('[Checkpoint] Notice Board post failed:', msg);
-    showToast(msg);
+    showToast(err.message || 'Could not post note. Try again.');
   } finally {
     if (btn) btn.disabled = false;
   }
