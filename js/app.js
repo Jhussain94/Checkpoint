@@ -75,19 +75,29 @@ function onNewDropArrived(drop) {
 function renderCheckpoints() {}
 
 // ── SCREEN MANAGEMENT ─────────────────────────────────────────
+const USERNAME_KEY = 'checkpointUsername';
+const FAKE_ONLINE_NAMES = [
+  'printroom', 'sketchbook', 'critsoon', 'librarykid', 'workshop',
+  'risoriso', 'canteen', 'camberwellkid', 'studio3', 'latecrits',
+  'moodboard', 'mediaunit', 'artsbar', 'lecture9', 'linoink',
+];
+
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('screen-' + id);
   if (el) { el.classList.add('active'); currentScreen = id; }
-  // Start the game engine when the world screen becomes active
+  if (id === 'nickname') prepNicknamePage();
   if (id === 'world') setTimeout(() => { initMapBoy(); }, 80);
 }
 
 function transitionTo(id) {
   if (id === 'world') {
-    fadeOutLoadingAudio();   // fade the loading screen music
+    fadeOutLoadingAudio();
     stopLoadingAnimations();
-    startAmbientAudio();     // start map ambient — direct click handler, always allowed
+    startAmbientAudio();
+  } else if (id === 'nickname' && (currentScreen === 'arrival' || currentScreen === 'loading')) {
+    fadeOutLoadingAudio();
+    stopLoadingAnimations();
   }
   const from = document.getElementById('screen-' + currentScreen);
   if (from) {
@@ -96,6 +106,62 @@ function transitionTo(id) {
     setTimeout(() => { from.classList.remove('active'); from.style.opacity = ''; }, 700);
   }
   setTimeout(() => showScreen(id), 350);
+}
+
+function prepNicknamePage() {
+  const input = document.getElementById('nickname-input');
+  const err   = document.getElementById('nickname-error');
+  if (err) { err.textContent = ''; err.classList.remove('visible'); }
+  if (input) {
+    input.value = localStorage.getItem(USERNAME_KEY) || '';
+    setTimeout(() => input.focus(), 400);
+  }
+}
+
+function submitNickname() {
+  const input = document.getElementById('nickname-input');
+  const err   = document.getElementById('nickname-error');
+  if (!input) return;
+
+  const name = input.value.trim();
+  if (!name) {
+    if (err) {
+      err.textContent = 'pick a nickname first';
+      err.classList.add('visible');
+    }
+    input.focus();
+    return;
+  }
+
+  localStorage.setItem(USERNAME_KEY, name.slice(0, 12));
+  if (err) err.classList.remove('visible');
+  transitionTo('world');
+}
+
+function renderStudyOnlineList() {
+  const el = document.getElementById('study-laptop-online');
+  if (!el) return;
+
+  const user = localStorage.getItem(USERNAME_KEY) || 'guest';
+  const pool = FAKE_ONLINE_NAMES.filter(n => n !== user).sort(() => Math.random() - 0.5);
+  const count = 2 + Math.floor(Math.random() * 3);
+  const others = pool.slice(0, count);
+  const safeUser = user.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  el.innerHTML =
+    '<div class="study-online-label">online now</div>' +
+    '<ul class="study-online-list">' +
+    `<li class="is-you">• ${safeUser}</li>` +
+    others.map(n => {
+      const safe = n.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return `<li>• ${safe}</li>`;
+    }).join('') +
+    '</ul>';
+
+  const longest = Math.max(user.length, ...others.map(n => n.length), 10);
+  const fs = longest > 12 ? 11 : longest > 10 ? 12 : longest > 8 ? 13 : 15;
+  el.style.setProperty('--study-online-fs', fs + 'px');
+  el.style.display = '';
 }
 
 // ── LOADING SEQUENCE ──────────────────────────────────────────
@@ -700,7 +766,26 @@ function wireEvents() {
     startBtn.addEventListener('click', e => {
       if (startBtn.disabled || !startBtn.classList.contains('ready')) return;
       e.preventDefault();
-      transitionTo('world');
+      transitionTo('nickname');
+    });
+  }
+
+  const nicknameInput = document.getElementById('nickname-input');
+  const nicknameBtn   = document.getElementById('nickname-enter-btn');
+  if (nicknameBtn) {
+    nicknameBtn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      submitNickname();
+    });
+  }
+  if (nicknameInput) {
+    nicknameInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') e.preventDefault();
+    });
+    nicknameInput.addEventListener('input', () => {
+      const err = document.getElementById('nickname-error');
+      if (err) err.classList.remove('visible');
     });
   }
 
@@ -1659,12 +1744,15 @@ function showStudyLobby() {
   stopStudyMusic();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-study').classList.add('active');
+  currentScreen = 'study';
+  renderStudyOnlineList();
 }
 function backFromStudy() {
   stopStudyTimer();
   stopStudyMusic();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-world').classList.add('active');
+  currentScreen = 'world';
   const ambient = document.getElementById('ambient-audio');
   if (ambient && !audioMuted && audioStarted) ambient.play().catch(() => {});
 }
@@ -1726,6 +1814,8 @@ function confirmStudyTimer() {
   // Swap start button → countdown display
   document.getElementById('study-start-btn').style.display   = 'none';
   document.getElementById('study-timer-display').style.display = 'flex';
+  const online = document.getElementById('study-laptop-online');
+  if (online) online.style.display = 'none';
   _tickStudyTimer();
   if (studyTimerInterval) clearInterval(studyTimerInterval);
   studyTimerInterval = setInterval(_tickStudyTimer, 1000);
@@ -1776,6 +1866,8 @@ function _resetStudyTimer() {
   studyTimerSeconds = 0;
   document.getElementById('study-start-btn').style.display    = '';
   document.getElementById('study-timer-display').style.display = 'none';
+  const online = document.getElementById('study-laptop-online');
+  if (online) online.style.display = '';
   const el = document.getElementById('study-timer-count');
   if (el) el.textContent = '00:00';
 }

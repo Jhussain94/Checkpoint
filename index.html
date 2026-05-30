@@ -32,7 +32,7 @@
     <button id="start-btn"
             aria-label="Enter the world"
             disabled
-            onclick="transitionTo('world')">
+            onclick="transitionTo('nickname')">
     </button>
 
     <!-- Boy walk — wrapper clips; each img shifted so character stays centred -->
@@ -56,6 +56,25 @@
     <p class="loading-text" id="loading-text">Waking up the campus...</p>
   </div>
 
+</div>
+
+
+<!-- ──────────────────────────────────────────────────────────────
+     SCREEN 2 — NICKNAME (after START, before map)
+────────────────────────────────────────────────────────────────── -->
+<div class="screen" id="screen-nickname">
+  <div id="nickname-img-wrap">
+    <img id="nickname-bg" src="img/Nickname.png" alt="Choose nickname"/>
+
+    <input id="nickname-input" type="text" maxlength="12"
+           autocomplete="off" spellcheck="false"
+           aria-label="Choose nickname"/>
+
+    <button id="nickname-enter-btn" type="button"
+            aria-label="Enter Camberwell"></button>
+
+    <p id="nickname-error" aria-live="polite"></p>
+  </div>
 </div>
 
 
@@ -487,6 +506,9 @@
 
     <!-- Transparent hit-target over the illustrated green "start" button -->
     <button id="study-start-btn" onclick="openStudyTimerModal()" aria-label="Start timer"></button>
+
+    <!-- Online users on the laptop screen -->
+    <div id="study-laptop-online" aria-live="polite"></div>
 
     <!-- Countdown overlay — shown when timer is running -->
     <div id="study-timer-display">

@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'UglyDave';
-  src: url('Font/UglyDaveRegular.otf') format('opentype');
+  src: url('../assets/fonts/UglyDaveRegular.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -282,6 +282,87 @@ html, body {
   0%,100% { transform: translateY(0) rotate(0deg);    opacity: 0.65; }
   50%      { transform: translateY(-10px) rotate(20deg); opacity: 1;  }
 }
+
+/* ─── NICKNAME SCREEN ───────────────────────────────────────────────────── */
+#screen-nickname {
+  background: var(--sky);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#nickname-img-wrap {
+  position: relative;
+  aspect-ratio: 2048 / 1447;
+  width: min(calc(100vw - 56px), calc((100vh - 48px) * 2048 / 1447));
+  height: auto;
+  overflow: hidden;
+  border-radius: 22px;
+  box-shadow: 0 10px 48px rgba(42,26,4,0.30), 0 2px 8px rgba(42,26,4,0.12);
+}
+#nickname-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+#nickname-input {
+  position: absolute;
+  left: 28%;
+  top: 52.5%;
+  width: 44%;
+  height: 5.5%;
+  z-index: 20;
+  padding-left: 12px;
+  padding-right: 12px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'UglyDave', sans-serif;
+  font-size: 28px;
+  color: #354a2e;
+  text-align: left;
+  letter-spacing: 0.02em;
+  pointer-events: auto;
+}
+#nickname-input::placeholder { color: rgba(53, 74, 46, 0.35); }
+#nickname-enter-btn {
+  position: absolute;
+  left: 38%;
+  top: 67.3%;
+  width: 24%;
+  height: 7.2%;
+  z-index: 30;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  padding: 0;
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+#nickname-enter-btn:focus-visible {
+  outline: 2px solid rgba(58, 82, 24, 0.45);
+  outline-offset: 2px;
+}
+#nickname-error {
+  position: absolute;
+  left: 26.5%;
+  top: 76%;
+  width: 46%;
+  z-index: 20;
+  pointer-events: none;
+  text-align: center;
+  font-family: 'UglyDave', sans-serif;
+  font-size: 14px;
+  color: #8b3018;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+#nickname-error.visible { opacity: 1; }
 
 /* ─── WORLD SCREEN ───────────────────────────────────────────────────────── */
 #screen-world {
@@ -784,8 +865,8 @@ html, body {
 }
 #study-img-wrap {
   position: relative;
-  aspect-ratio: 1008 / 720;
-  width: min(calc(100vw - 56px), calc((100vh - 48px) * 1008 / 720));
+  aspect-ratio: 2048 / 1447;
+  width: min(calc(100vw - 56px), calc((100vh - 48px) * 2048 / 1447));
   height: auto;
   overflow: hidden;
   border-radius: 22px;
@@ -813,12 +894,61 @@ html, body {
   background: transparent; border: none; cursor: pointer;
 }
 
+/* Online users list — inside the laptop cream screen */
+#study-laptop-online {
+  position: absolute;
+  left: 57.2%;
+  top: 55.3%;
+  width: 15%;
+  height: 9.5%;
+  z-index: 18;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+  box-sizing: border-box;
+  transform: rotate(5deg);
+  transform-origin: top left;
+  opacity: 1;
+  text-align: left;
+}
+.study-online-label {
+  font-family: 'UglyDave', sans-serif;
+  font-size: var(--study-online-fs, 15px);
+  color: #354a2e;
+  letter-spacing: 0.01em;
+  text-transform: lowercase;
+  opacity: 1;
+  line-height: 1.15;
+  margin-bottom: 2px;
+}
+.study-online-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: 'UglyDave', sans-serif;
+  font-size: var(--study-online-fs, 15px);
+  color: #354a2e;
+  line-height: 1.15;
+  letter-spacing: 0;
+  opacity: 1;
+}
+.study-online-list li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 1; }
+.study-online-list li.is-you { color: #354a2e; }
+
 /* Countdown — centred on the laptop screen */
 #study-timer-display {
   display: none;
   position: absolute;
-  left: 45%; top: 28%;
-  width: 22%; height: 30%;
+  left: 57.2%;
+  top: 55.3%;
+  width: 15%;
+  height: 9.5%;
+  transform: rotate(5deg);
+  transform-origin: top left;
   flex-direction: column;
   align-items: center;
   justify-content: center;
