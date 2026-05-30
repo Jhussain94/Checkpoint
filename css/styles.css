@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'UglyDave';
-  src: url('Font/UglyDaveRegular.otf') format('opentype');
+  src: url('../assets/fonts/UglyDaveRegular.otf') format('opentype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
@@ -46,16 +46,13 @@ html, body {
   opacity: 0; pointer-events: none;
   transition: opacity 0.7s ease;
 }
-/* Children must also be non-interactive when their screen is inactive —
-   pointer-events is NOT inherited so we set it explicitly on descendants. */
-.screen * {
-  pointer-events: none;
+/* Only inactive screens block clicks — active screens rely on per-element rules */
+.screen:not(.active),
+.screen:not(.active) * {
+  pointer-events: none !important;
 }
 .screen.active {
-  opacity: 1; pointer-events: all;
-}
-.screen.active * {
-  pointer-events: auto;
+  opacity: 1; pointer-events: auto;
 }
 
 /* ─── ARRIVAL SCREEN (loading + start merged) ───────────────────────────── */
@@ -107,7 +104,8 @@ html, body {
 #start-btn.ready {
   opacity: 1;
   cursor: pointer;
-  pointer-events: all;
+  pointer-events: auto;
+  z-index: 40;
   /* Completely invisible — the illustrated START button is the only visual */
   background: transparent;
   border: none;
@@ -179,7 +177,7 @@ html, body {
   100% { left: calc(100% + 80px); }
 }
 
-/* ── FALLING LEAVES FROM TREES ───────────────────────────────────────────── */
+/* ── FALLING LEAVES FROM LEFT TREE (arrival screen only) ─────────────────── */
 #falling-leaves {
   position: absolute;
   inset: 0;
@@ -192,13 +190,19 @@ html, body {
   pointer-events: none;
   opacity: 0;
   height: auto;
-  animation: leafFall 14s ease-in 0s 1 forwards;
+  will-change: transform, opacity;
+  animation: leafDriftFall linear 0s infinite;
 }
-@keyframes leafFall {
-  0%   { opacity: 0;   transform: translate(0, 0) rotate(0deg); }
-  6%   { opacity: 0.9; }
-  90%  { opacity: 0.5; }
-  100% { opacity: 0;   transform: translate(var(--leaf-dx, 20px), var(--leaf-dy, 220px)) rotate(var(--leaf-rot, 290deg)); }
+@keyframes leafDriftFall {
+  0%   { opacity: 0; transform: translate(0, 0) rotate(0deg); }
+  4%   { opacity: 1; }
+  18%  { opacity: 1; transform: translate(var(--leaf-dx1), var(--leaf-dy1)) rotate(var(--leaf-rot1)); }
+  36%  { opacity: 1; transform: translate(var(--leaf-dx2), var(--leaf-dy2)) rotate(var(--leaf-rot2)); }
+  54%  { opacity: 1; transform: translate(var(--leaf-dx3), var(--leaf-dy3)) rotate(var(--leaf-rot3)); }
+  72%  { opacity: 1; transform: translate(var(--leaf-dx4), var(--leaf-dy4)) rotate(var(--leaf-rot4)); }
+  90%  { opacity: 1; transform: translate(var(--leaf-dx5), var(--leaf-dy5)) rotate(var(--leaf-rot5)); }
+  97%  { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--leaf-dx), var(--leaf-dy)) rotate(var(--leaf-rot)); }
 }
 
 /* ── WIND PARTICLES ──────────────────────────────────────────────────────── */
@@ -221,7 +225,7 @@ html, body {
   100% { left: calc(100% + 40px); opacity: 0;  transform: translateY(var(--lift,-20px)) rotate(var(--rot,270deg)); }
 }
 
-/* Loading overlay — sits above the image inside the rounded frame */
+/* Loading overlay — visual only, never blocks clicks */
 #loading-overlay {
   position: absolute; inset: 0;
   display: flex;
@@ -230,12 +234,14 @@ html, body {
   justify-content: flex-end;
   padding-bottom: 44px;
   z-index: 30;
-  pointer-events: none;
+  pointer-events: none !important;
   transition: opacity 0.6s ease;
   border-radius: inherit;         /* clips to the same 22px radius as wrapper */
 }
 #loading-overlay.hidden {
   opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 .loading-track {
   width: 220px; height: 10px;
@@ -257,6 +263,11 @@ html, body {
   letter-spacing: 0.06em;
 }
 
+#sparkle-container {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 25;
+}
 /* Sparkles (shown after loading) */
 .sparkle {
   position: absolute;
@@ -272,11 +283,99 @@ html, body {
   50%      { transform: translateY(-10px) rotate(20deg); opacity: 1;  }
 }
 
+/* ─── NICKNAME SCREEN ───────────────────────────────────────────────────── */
+#screen-nickname {
+  background: var(--sky);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#nickname-img-wrap {
+  position: relative;
+  aspect-ratio: 2048 / 1447;
+  width: min(calc(100vw - 56px), calc((100vh - 48px) * 2048 / 1447));
+  height: auto;
+  overflow: hidden;
+  border-radius: 22px;
+  box-shadow: 0 10px 48px rgba(42,26,4,0.30), 0 2px 8px rgba(42,26,4,0.12);
+}
+#nickname-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+  user-select: none;
+  pointer-events: none;
+}
+#nickname-input {
+  position: absolute;
+  left: 28%;
+  top: 52.5%;
+  width: 44%;
+  height: 5.5%;
+  z-index: 20;
+  padding-left: 12px;
+  padding-right: 12px;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: 'UglyDave', sans-serif;
+  font-size: 28px;
+  color: #354a2e;
+  text-align: left;
+  letter-spacing: 0.02em;
+  pointer-events: auto;
+}
+#nickname-input::placeholder { color: rgba(53, 74, 46, 0.35); }
+#nickname-enter-btn {
+  position: absolute;
+  left: 38%;
+  top: 67.3%;
+  width: 24%;
+  height: 7.2%;
+  z-index: 30;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  pointer-events: auto;
+  padding: 0;
+  margin: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+#nickname-enter-btn:focus-visible {
+  outline: 2px solid rgba(58, 82, 24, 0.45);
+  outline-offset: 2px;
+}
+#nickname-error {
+  position: absolute;
+  left: 26.5%;
+  top: 76%;
+  width: 46%;
+  z-index: 20;
+  pointer-events: none;
+  text-align: center;
+  font-family: 'UglyDave', sans-serif;
+  font-size: 14px;
+  color: #8b3018;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+#nickname-error.visible { opacity: 1; }
+
 /* ─── WORLD SCREEN ───────────────────────────────────────────────────────── */
 #screen-world {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+#screen-world.active {
+  display: flex;
+  pointer-events: auto;
+  visibility: visible;
+  z-index: 1;
 }
 
 /* Same aspect-ratio lock as arrival and leave-drop */
@@ -720,52 +819,50 @@ html, body {
 #vol-toggle:hover { background: rgba(253,248,236,1); transform: scale(1.12); }
 #vol-toggle:active { transform: scale(0.95); }
 
-/* ─── MAP FLOWERS (Momo) ─────────────────────────────────────────────────── */
+/* ─── MAP FLOWERS (page 2 — sparse decor on #screen-world) ────────────── */
 #map-flowers {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  z-index: 5;
+  z-index: 6;
+  overflow: visible;
 }
-.map-flower {
+.map-deco {
   position: absolute;
   height: auto;
-  width: 55px;
-  transform-origin: bottom center;
-  animation-name: flowerSway;
-  animation-duration: 6s;
-  animation-delay: 0s;
-  animation-iteration-count: infinite;
-  animation-timing-function: ease-in-out;
-  animation-play-state: running;
-}
-.map-flower.flower-a { animation-name: flowerSway; }
-.map-flower.flower-b { animation-name: flowerSwayWide; }
-
-@keyframes flowerSway {
-  0%   { transform: rotate(-5deg); }
-  50%  { transform: rotate(5deg);  }
-  100% { transform: rotate(-5deg); }
-}
-@keyframes flowerSwayWide {
-  0%   { transform: rotate(-9deg); }
-  50%  { transform: rotate(9deg);  }
-  100% { transform: rotate(-9deg); }
-}
-
-/* ─── SKY LEAVES (Momo — loading screen) ────────────────────────────────── */
-.sky-leaf {
-  position: absolute;
   pointer-events: none;
-  opacity: 0;
-  height: auto;
-  animation: skyLeafDrift 18s ease-in-out 0s 1 forwards;
+  transform-origin: bottom center;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  user-select: none;
+  display: block;
 }
-@keyframes skyLeafDrift {
-  0%   { opacity: 0;    transform: translate(0, 0) rotate(0deg); }
-  8%   { opacity: 0.8;  }
-  88%  { opacity: 0.55; }
-  100% { opacity: 0;    transform: translate(var(--leaf-dx, -60px), var(--leaf-dy, 160px)) rotate(var(--leaf-rot, 200deg)); }
+/* PNGs are full-canvas exports — scale with map width so artwork is visible */
+.map-deco.map-yellow { width: 20%; }
+.map-deco.map-white  { width: 17%; }
+.map-deco.map-grass  { width: 13%; }
+/* Top edge: smaller so tufts stay on green hill, not cream sky */
+.map-deco.map-top.map-yellow { width: 13%; }
+.map-deco.map-top.map-white  { width: 11%; }
+.map-deco.map-top.map-grass  { width: 10%; }
+.map-deco.map-top { transform-origin: bottom center; }
+.map-flower { opacity: 0.94; }
+.map-deco.sway-a { animation-name: mapGrassSwayA; animation-duration: 7s; }
+.map-deco.sway-b { animation-name: mapGrassSwayB; animation-duration: 8s; }
+.map-deco.sway-c { animation-name: mapGrassSwayC; animation-duration: 6.5s; }
+
+@keyframes mapGrassSwayA {
+  0%, 100% { transform: rotate(-2.5deg) translateX(0); }
+  50%      { transform: rotate(2.5deg)  translateX(2px); }
+}
+@keyframes mapGrassSwayB {
+  0%, 100% { transform: rotate(-3.5deg) translateX(-1px); }
+  50%      { transform: rotate(3deg)    translateX(3px); }
+}
+@keyframes mapGrassSwayC {
+  0%, 100% { transform: rotate(-1.5deg) translateX(1px); }
+  33%      { transform: rotate(2deg)    translateX(-2px); }
+  66%      { transform: rotate(-2deg)   translateX(2px); }
 }
 
 /* ─── STUDY LOBBY — SCREEN 3 ────────────────────────────────────────────── */
@@ -775,8 +872,8 @@ html, body {
 }
 #study-img-wrap {
   position: relative;
-  aspect-ratio: 1008 / 720;
-  width: min(calc(100vw - 56px), calc((100vh - 48px) * 1008 / 720));
+  aspect-ratio: 2048 / 1447;
+  width: min(calc(100vw - 56px), calc((100vh - 48px) * 2048 / 1447));
   height: auto;
   overflow: hidden;
   border-radius: 22px;
@@ -804,12 +901,61 @@ html, body {
   background: transparent; border: none; cursor: pointer;
 }
 
+/* Online users list — inside the laptop cream screen */
+#study-laptop-online {
+  position: absolute;
+  left: 57.2%;
+  top: 55.3%;
+  width: 15%;
+  height: 9.5%;
+  z-index: 18;
+  padding: 0;
+  overflow: hidden;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 0;
+  box-sizing: border-box;
+  transform: rotate(5deg);
+  transform-origin: top left;
+  opacity: 1;
+  text-align: left;
+}
+.study-online-label {
+  font-family: 'UglyDave', sans-serif;
+  font-size: var(--study-online-fs, 15px);
+  color: #354a2e;
+  letter-spacing: 0.01em;
+  text-transform: lowercase;
+  opacity: 1;
+  line-height: 1.15;
+  margin-bottom: 2px;
+}
+.study-online-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: 'UglyDave', sans-serif;
+  font-size: var(--study-online-fs, 15px);
+  color: #354a2e;
+  line-height: 1.15;
+  letter-spacing: 0;
+  opacity: 1;
+}
+.study-online-list li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 1; }
+.study-online-list li.is-you { color: #354a2e; }
+
 /* Countdown — centred on the laptop screen */
 #study-timer-display {
   display: none;
   position: absolute;
-  left: 45%; top: 28%;
-  width: 22%; height: 30%;
+  left: 57.2%;
+  top: 55.3%;
+  width: 15%;
+  height: 9.5%;
+  transform: rotate(5deg);
+  transform-origin: top left;
   flex-direction: column;
   align-items: center;
   justify-content: center;
@@ -971,6 +1117,21 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 40;
+}
+
+#screen-leave-page:not(.active) {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  z-index: -1 !important;
+}
+
+#screen-leave-page.active {
+  display: flex;
+  pointer-events: auto;
+  visibility: visible;
+  z-index: 40;
 }
 
 /* Same aspect-ratio lock as the other two screens. */
@@ -1136,8 +1297,8 @@ html, body {
 }
 #cc-wrap {
   position: relative;
-  aspect-ratio: 1008 / 720;
-  width: min(calc(100vw - 56px), calc((100vh - 48px) * 1008 / 720));
+  aspect-ratio: 2048 / 1447;
+  width: min(calc(100vw - 56px), calc((100vh - 48px) * 2048 / 1447));
   height: auto;
   overflow: hidden;
   border-radius: 22px;
@@ -1163,54 +1324,82 @@ html, body {
   cursor: pointer;   /* pointer ONLY here — nowhere else on the screen */
   z-index: 20;
 }
-/* 3×2 grid — calibrated to sit exactly over the illustrated polaroid frames */
+#cc-upload-status {
+  position: absolute;
+  top: 62%; left: 5%;
+  width: 23%;
+  margin: 0;
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(7px, 0.85vw, 11px);
+  color: #2a1a04;
+  text-align: center;
+  z-index: 25;
+  pointer-events: none;
+  line-height: 1.3;
+}
+.cc-status-loading { color: rgba(42,26,4,0.75); font-style: italic; }
+.cc-status-success { color: #2a6a2a; }
+.cc-status-error   { color: #a03020; }
+/* Photo slots — absolute over 2048×1447 background (percentages from source art) */
+.campus-camera-section,
 #cc-grid {
   position: absolute;
-  left: 37.5%; top: 29%;
-  width: 61%; height: 50%;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(2, 1fr);
-  column-gap: 2.5%;
-  row-gap: 4.5%;
+  inset: 0;
   z-index: 10;
   pointer-events: none;
 }
-.cc-frame {
-  position: relative;
-  overflow: hidden;
-  pointer-events: all;
-}
-/* Image fills the inner white photo area of each illustrated polaroid.
-   Offsets account for the border: ~11% on sides, ~11% top, ~19% bottom lip. */
-.cc-frame img {
+.photo-slot {
   position: absolute;
-  top: 11%; left: 11%;
-  width: 78%; height: 70%;
+  overflow: visible;      /* allow delete button to sit outside clip area */
+  pointer-events: none;
+}
+/* clip-path goes on the img so it clips the photo but NOT the delete button */
+.photo-slot img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  object-position: center;
   display: block;
-  cursor: default;
 }
-/* Delete button — sits in the top-right of the photo area */
-.cc-del {
+.photo-slot-1 { left:40.92%; top:33.10%; width:13.92%; height:20.04%; }
+.photo-slot-1 img { clip-path: polygon(0% 4.5%, 97.2% 0%, 100% 95.2%, 3.9% 100%); }
+
+.photo-slot-2 { left:60.25%; top:33.59%; width:14.21%; height:18.87%; }
+.photo-slot-2 img { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); }
+
+.photo-slot-3 { left:78.91%; top:33.52%; width:15.09%; height:20.18%; }
+.photo-slot-3 img { clip-path: polygon(9.1% 0%, 100% 9.9%, 91.3% 100%, 0% 89.7%); }
+
+.photo-slot-4 { left:40.43%; top:63.23%; width:14.45%; height:19.49%; }
+.photo-slot-4 img { clip-path: polygon(4.1% 0%, 100% 4.3%, 96.3% 100%, 0% 97.2%); }
+
+.photo-slot-5 { left:60.25%; top:63.65%; width:14.16%; height:19.14%; }
+.photo-slot-5 img { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); }
+
+.photo-slot-6 { left:79.49%; top:62.47%; width:14.50%; height:21.01%; }
+.photo-slot-6 img { clip-path: polygon(0% 7.9%, 92.3% 0%, 100% 92.8%, 4.7% 100%); }
+
+/* Delete button — top-right of each filled slot, always visible */
+.photo-del {
   position: absolute;
-  top: 12%; right: 11%;
-  width: clamp(14px, 1.5vw, 20px);
-  height: clamp(14px, 1.5vw, 20px);
+  top: 2%; right: 2%;
+  width: clamp(16px, 1.8vw, 22px);
+  height: clamp(16px, 1.8vw, 22px);
   border-radius: 50%;
-  background: rgba(0,0,0,0.60);
+  background: rgba(0,0,0,0.65);
   color: #fff;
   border: none;
-  font-size: clamp(8px, 0.9vw, 12px);
-  line-height: 1;
   cursor: pointer;
+  pointer-events: all;    /* override parent pointer-events:none */
+  z-index: 50;
+  font-size: clamp(9px, 1vw, 12px);
   display: flex; align-items: center; justify-content: center;
-  opacity: 0;
-  transition: opacity 0.15s;
-  z-index: 5;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  transition: background 0.12s, transform 0.1s;
+  line-height: 1;
 }
-.cc-frame:hover .cc-del { opacity: 1; }
-.cc-frame.cc-empty { /* blank — illustrated polaroid frame shows through */ }
+.photo-del:hover  { background: rgba(180,30,20,0.90); transform: scale(1.15); }
+.photo-del:active { transform: scale(0.9); }
 
 /* ─── CANVAS SCREEN ──────────────────────────────────────────────────────── */
 #screen-canvas {
@@ -1405,9 +1594,6 @@ html, body {
   .world-title    { font-size: 0.95rem; }
   .world-subtitle { font-size: 0.6rem; }
   #vol-toggle     { width: 34px; height: 34px; font-size: 1rem; }
-
-  /* ── Flowers — smaller on mobile ── */
-  .map-flower { width: calc(18px * var(--fscale, 1)); }
 
   /* ── Zone hotspot buttons — bigger tap targets, labels always visible ── */
   .mzb-dot { width: 22px; height: 22px; }
@@ -1648,6 +1834,14 @@ html, body {
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
+  flex: 1;
+}
+.nb-slot-date {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(6px, 0.65vw, 9px);
+  color: rgba(42,26,4,0.45);
+  margin-top: auto;
+  flex-shrink: 0;
 }
 .nb-slot-icon {
   font-size: clamp(14px, 1.8vw, 24px);

@@ -23,15 +23,46 @@ const MOOD_ICONS = {
 const AREA_ICONS = { meadow:'🎵', garden:'🌸', workshop:'✏️', forest:'🌲', corner:'📍' };
 
 // ── BOOT ──────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-  await initDB();          // load drops from Supabase (or seed data)
+// UI must init immediately — never block on Firebase/Supabase network calls.
+document.addEventListener('DOMContentLoaded', () => {
   showScreen('arrival');
   buildMeadowCards();
   buildLeaveForm();
   wireEvents();
-  const img = document.getElementById('arrival-scene');
-  if (img && img.complete) onSceneLoaded();
+  bootArrivalScene();
+
+  initDB().catch(err => console.error('[Checkpoint] initDB error —', err.message));
+  initFirebaseInteractive().catch(err => console.error('[Checkpoint] Firebase init error —', err.message));
 });
+
+/** Start loading sequence once the arrival illustration is ready. */
+function bootArrivalScene() {
+  const img = document.getElementById('arrival-scene');
+  if (!img) {
+    console.warn('[Checkpoint] Arrival image missing — enabling start');
+    onSceneLoaded();
+    return;
+  }
+
+  const start = () => onSceneLoaded();
+
+  if (img.complete) start();
+  else {
+    img.addEventListener('load', start, { once: true });
+    img.addEventListener('error', () => {
+      console.warn('[Checkpoint] Arrival image failed to load — enabling start anyway');
+      start();
+    }, { once: true });
+  }
+
+  // Fallback if image load hangs
+  setTimeout(() => {
+    if (!loadingStarted) {
+      console.warn('[Checkpoint] Arrival load timeout — enabling start');
+      onSceneLoaded();
+    }
+  }, 8000);
+}
 
 // Called by drops.js real-time subscription when a new drop arrives
 function onNewDropArrived(drop) {
@@ -44,19 +75,29 @@ function onNewDropArrived(drop) {
 function renderCheckpoints() {}
 
 // ── SCREEN MANAGEMENT ─────────────────────────────────────────
+const USERNAME_KEY = 'checkpointUsername';
+const FAKE_ONLINE_NAMES = [
+  'printroom', 'sketchbook', 'critsoon', 'librarykid', 'workshop',
+  'risoriso', 'canteen', 'camberwellkid', 'studio3', 'latecrits',
+  'moodboard', 'mediaunit', 'artsbar', 'lecture9', 'linoink',
+];
+
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   const el = document.getElementById('screen-' + id);
   if (el) { el.classList.add('active'); currentScreen = id; }
-  // Start the game engine when the world screen becomes active
+  if (id === 'nickname') prepNicknamePage();
   if (id === 'world') setTimeout(() => { initMapBoy(); }, 80);
 }
 
 function transitionTo(id) {
   if (id === 'world') {
-    fadeOutLoadingAudio();   // fade the loading screen music
+    fadeOutLoadingAudio();
     stopLoadingAnimations();
-    startAmbientAudio();     // start map ambient — direct click handler, always allowed
+    startAmbientAudio();
+  } else if (id === 'nickname' && (currentScreen === 'arrival' || currentScreen === 'loading')) {
+    fadeOutLoadingAudio();
+    stopLoadingAnimations();
   }
   const from = document.getElementById('screen-' + currentScreen);
   if (from) {
@@ -65,6 +106,62 @@ function transitionTo(id) {
     setTimeout(() => { from.classList.remove('active'); from.style.opacity = ''; }, 700);
   }
   setTimeout(() => showScreen(id), 350);
+}
+
+function prepNicknamePage() {
+  const input = document.getElementById('nickname-input');
+  const err   = document.getElementById('nickname-error');
+  if (err) { err.textContent = ''; err.classList.remove('visible'); }
+  if (input) {
+    input.value = localStorage.getItem(USERNAME_KEY) || '';
+    setTimeout(() => input.focus(), 400);
+  }
+}
+
+function submitNickname() {
+  const input = document.getElementById('nickname-input');
+  const err   = document.getElementById('nickname-error');
+  if (!input) return;
+
+  const name = input.value.trim();
+  if (!name) {
+    if (err) {
+      err.textContent = 'pick a nickname first';
+      err.classList.add('visible');
+    }
+    input.focus();
+    return;
+  }
+
+  localStorage.setItem(USERNAME_KEY, name.slice(0, 12));
+  if (err) err.classList.remove('visible');
+  transitionTo('world');
+}
+
+function renderStudyOnlineList() {
+  const el = document.getElementById('study-laptop-online');
+  if (!el) return;
+
+  const user = localStorage.getItem(USERNAME_KEY) || 'guest';
+  const pool = FAKE_ONLINE_NAMES.filter(n => n !== user).sort(() => Math.random() - 0.5);
+  const count = 2 + Math.floor(Math.random() * 3);
+  const others = pool.slice(0, count);
+  const safeUser = user.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  el.innerHTML =
+    '<div class="study-online-label">online now</div>' +
+    '<ul class="study-online-list">' +
+    `<li class="is-you">• ${safeUser}</li>` +
+    others.map(n => {
+      const safe = n.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return `<li>• ${safe}</li>`;
+    }).join('') +
+    '</ul>';
+
+  const longest = Math.max(user.length, ...others.map(n => n.length), 10);
+  const fs = longest > 12 ? 11 : longest > 10 ? 12 : longest > 8 ? 13 : 15;
+  el.style.setProperty('--study-online-fs', fs + 'px');
+  el.style.display = '';
 }
 
 // ── LOADING SEQUENCE ──────────────────────────────────────────
@@ -113,111 +210,100 @@ function onSceneLoaded() {
 }
 
 // ── LOADING SCREEN ANIMATIONS ─────────────────────────────────
-let boyFrameTimer  = null;
-let skyLeafInterval = null;
-let fallingLeafTimers = [];
+let fallLeavesActive = false;
 
-// Coloured leaf images from Momo — Yellow Leaf omitted (file not available)
-const LOADING_LEAF_FILES = [
-  'img/loading screen assets/2 Leaf.png',
-  'img/loading screen assets/Leaf.png',
-  'img/loading screen assets/Orange Leaf.png',
-  'img/loading screen assets/green leaf.png',
-  'img/loading screen assets/red leaf.png',
+const ARRIVAL_LEAF_FILES = [
+  'img/page%202/%20Yellow%20Leaf.png',
+  'img/page%202/2%20Leaf.png',
+  'img/page%202/green%20leaf.png',
+  'img/page%202/Orange%20Leaf.png',
+  'img/page%202/red%20leaf.png',
 ];
+const FALL_LEAF_COUNT = 10;
+/* PNGs are full-canvas exports — leaf art is ~14% of image width */
+const LEAF_ART_FRAC = 0.14;
+const LEFT_TREE_ZONE = { xMin: 2, xMax: 14, yMin: 20, yMax: 38 };
 
-function getRandomLoadingLeafSrc() {
-  return LOADING_LEAF_FILES[Math.floor(Math.random() * LOADING_LEAF_FILES.length)];
+function getRandomArrivalLeafSrc() {
+  return ARRIVAL_LEAF_FILES[Math.floor(Math.random() * ARRIVAL_LEAF_FILES.length)];
 }
 
 function startLoadingAnimations() {
   startFallingLeaves();
-  startSkyLeafDrift();
 }
 
 function stopLoadingAnimations() {
-  // Clear any pending leaf spawn timers
-  fallingLeafTimers.forEach(id => clearTimeout(id));
-  fallingLeafTimers = [];
-  if (skyLeafInterval) { clearInterval(skyLeafInterval); skyLeafInterval = null; }
+  fallLeavesActive = false;
+  const container = document.getElementById('falling-leaves');
+  if (container) container.innerHTML = '';
   reduceAudioForMap();
 }
 
-// Sky leaves drift across the arrival screen from upper-left (Momo)
-function startSkyLeafDrift() {
+function setLeafDriftPath(leaf, driftX, driftY, rot) {
+  const swayAmp  = 6 + Math.random() * 10;
+  const swayFreq = 1.2 + Math.random() * 0.6;
+  const phase    = Math.random() * Math.PI * 2;
+  const steps    = [0.16, 0.34, 0.52, 0.70, 0.88];
+
+  steps.forEach((t, i) => {
+    const sway = Math.sin(phase + t * Math.PI * swayFreq) * swayAmp;
+    leaf.style.setProperty(`--leaf-dx${i + 1}`, (driftX * t + sway).toFixed(1) + 'px');
+    leaf.style.setProperty(`--leaf-dy${i + 1}`, (driftY * t).toFixed(1) + 'px');
+    leaf.style.setProperty(`--leaf-rot${i + 1}`, (rot * t).toFixed(1) + 'deg');
+  });
+
+  const endSway = Math.sin(phase + Math.PI * swayFreq) * swayAmp * 0.4;
+  leaf.style.setProperty('--leaf-dx',  (driftX + endSway).toFixed(1) + 'px');
+  leaf.style.setProperty('--leaf-dy',  driftY.toFixed(1) + 'px');
+  leaf.style.setProperty('--leaf-rot', rot.toFixed(1) + 'deg');
+}
+
+function buildLoopingLeaf(container, wrapW, wrapH, index) {
+  const visibleW = 8 + Math.random() * 10;
+  const imgW     = visibleW / LEAF_ART_FRAC;
+  const dur      = 7 + Math.random() * 7;
+  const delay    = index * 1.4 + Math.random() * 5;
+  const driftX   = wrapW * (0.45 + Math.random() * 0.45);
+  const driftY   = wrapH * (0.10 + Math.random() * 0.16);
+  const rot      = 100 + Math.random() * 260;
+
+  const leaf = document.createElement('img');
+  leaf.src       = getRandomArrivalLeafSrc();
+  leaf.className = 'fall-leaf';
+  leaf.alt       = '';
+  leaf.style.left = (LEFT_TREE_ZONE.xMin + Math.random() * (LEFT_TREE_ZONE.xMax - LEFT_TREE_ZONE.xMin)) + '%';
+  leaf.style.top  = (LEFT_TREE_ZONE.yMin + Math.random() * (LEFT_TREE_ZONE.yMax - LEFT_TREE_ZONE.yMin)) + '%';
+  leaf.style.width = imgW.toFixed(1) + 'px';
+  leaf.style.animationDuration = dur.toFixed(1) + 's';
+  leaf.style.animationDelay    = delay.toFixed(1) + 's';
+  setLeafDriftPath(leaf, driftX, driftY, rot);
+
+  container.appendChild(leaf);
+}
+
+function startFallingLeaves() {
   const container = document.getElementById('falling-leaves');
-  if (!container) return;
+  const wrap = document.getElementById('arrival-img-wrap');
+  if (!container || !wrap) return;
 
-  function spawnSkyLeaf() {
-    const screen = document.getElementById('screen-arrival');
-    if (!screen || !screen.classList.contains('active')) return;
+  fallLeavesActive = true;
+  container.innerHTML = '';
 
-    const leaf = document.createElement('img');
-    leaf.src       = getRandomLoadingLeafSrc();
-    leaf.className = 'sky-leaf';
-
-    const dur = 14 + Math.random() * 10;
-    leaf.style.left = (Math.random() * 90) + '%';
-    leaf.style.top  = (Math.random() * 30) + '%';
-    leaf.style.width = (28 + Math.random() * 22) + 'px';
-    leaf.style.animationDuration = dur + 's';
-    leaf.style.setProperty('--leaf-dx',  (-80 + Math.random() * 40) + 'px');
-    leaf.style.setProperty('--leaf-dy',  (120 + Math.random() * 100) + 'px');
-    leaf.style.setProperty('--leaf-rot', (150 + Math.random() * 200) + 'deg');
-
-    container.appendChild(leaf);
-    const removeId = setTimeout(() => leaf.remove(), (dur + 1) * 1000);
-    fallingLeafTimers.push(removeId);
+  function plant() {
+    if (!fallLeavesActive) return;
+    container.innerHTML = '';
+    const wrapW = wrap.offsetWidth  || 700;
+    const wrapH = wrap.offsetHeight || 500;
+    for (let i = 0; i < FALL_LEAF_COUNT; i++) {
+      buildLoopingLeaf(container, wrapW, wrapH, i);
+    }
   }
 
-  spawnSkyLeaf();
-  skyLeafInterval = setInterval(spawnSkyLeaf, 3500);
+  requestAnimationFrame(() => requestAnimationFrame(plant));
 }
 
 function reduceAudioForMap() {
   // Audio now starts at map volume (0.12) directly — nothing to fade.
-}
-
-// ── FALLING LEAVES FROM TREES ─────────────────────────────────────
-const TREE_POSITIONS = [
-  { x: 9,  y: 28 },   // left-side tree canopy
-  { x: 48, y: 28 },   // middle tree canopy
-];
-
-function startFallingLeaves() {
-  const container = document.getElementById('falling-leaves');
-  if (!container) return;
-
-  function spawnLeaf(tree) {
-    const screen = document.getElementById('screen-arrival');
-    if (!screen || !screen.classList.contains('active')) return;
-
-    const leaf = document.createElement('img');
-    leaf.src       = getRandomLoadingLeafSrc();
-    leaf.className = 'fall-leaf';
-
-    const dur = 12 + Math.random() * 8;
-    leaf.style.left = (tree.x + (-2 + Math.random() * 4)) + '%';
-    leaf.style.top  = (tree.y + (Math.random() * 3)) + '%';
-    leaf.style.width = (22 + Math.random() * 14) + 'px';
-    leaf.style.animationDuration = dur + 's';
-    leaf.style.setProperty('--leaf-dx',  (-30 + Math.random() * 60) + 'px');
-    leaf.style.setProperty('--leaf-dy',  (200 + Math.random() * 120) + 'px');
-    leaf.style.setProperty('--leaf-rot', (160 + Math.random() * 220) + 'deg');
-
-    container.appendChild(leaf);
-    const removeId = setTimeout(() => leaf.remove(), (dur + 1) * 1000);
-    fallingLeafTimers.push(removeId);
-  }
-
-  TREE_POSITIONS.forEach(tree => {
-    function scheduleNext() {
-      const tid = setTimeout(() => { spawnLeaf(tree); scheduleNext(); }, 5000 + Math.random() * 5000);
-      fallingLeafTimers.push(tid);
-    }
-    const tid = setTimeout(() => { spawnLeaf(tree); scheduleNext(); }, 1000 + Math.random() * 2000);
-    fallingLeafTimers.push(tid);
-  });
 }
 
 // ── LOADING SCREEN AUDIO ──────────────────────────────────────
@@ -675,6 +761,34 @@ function wireEvents() {
   // re-position START button if window is resized
   window.addEventListener('resize', positionStartButton);
 
+  const startBtn = document.getElementById('start-btn');
+  if (startBtn) {
+    startBtn.addEventListener('click', e => {
+      if (startBtn.disabled || !startBtn.classList.contains('ready')) return;
+      e.preventDefault();
+      transitionTo('nickname');
+    });
+  }
+
+  const nicknameInput = document.getElementById('nickname-input');
+  const nicknameBtn   = document.getElementById('nickname-enter-btn');
+  if (nicknameBtn) {
+    nicknameBtn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      submitNickname();
+    });
+  }
+  if (nicknameInput) {
+    nicknameInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') e.preventDefault();
+    });
+    nicknameInput.addEventListener('input', () => {
+      const err = document.getElementById('nickname-error');
+      if (err) err.classList.remove('visible');
+    });
+  }
+
   // close modals on backdrop click
   document.getElementById('modal-drop').addEventListener('click', e => {
     if (e.target.id === 'modal-drop') closeDrop();
@@ -687,6 +801,7 @@ function wireEvents() {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       if (document.getElementById('screen-study').classList.contains('active')) { backFromStudy(); return; }
+      if (document.getElementById('screen-your-drops').classList.contains('active')) { backToMap(); return; }
       if (document.getElementById('screen-leave-page').classList.contains('active')) { backToMap(); return; }
       if (leaveOpen)        closeLeaveForm();
       else if (activeDrop)  closeDrop();
@@ -707,6 +822,21 @@ function wireEvents() {
   });
 
   buildSparkles();
+
+  // Notice board back button — wired in JS in addition to HTML onclick
+  const nbBack = document.getElementById('nb-back');
+  if (nbBack) nbBack.addEventListener('click', () => closeNoticeBoard());
+
+  // Post notice board note with Enter (Shift+Enter for newline)
+  const nbInput = document.getElementById('nb-note-input');
+  if (nbInput) {
+    nbInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        submitNoticeBoardNote();
+      }
+    });
+  }
 }
 
 // ── UTILS ─────────────────────────────────────────────────────
@@ -922,43 +1052,83 @@ function showCameraScreen() {
 function backFromCamera() {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-world').classList.add('active');
+  currentScreen = 'world';
+  Object.keys(mapKeys).forEach(k => { delete mapKeys[k]; });
+  if (document.activeElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+  }
 }
 
 function ccTriggerUpload() {
   document.getElementById('cc-file-input').click();
 }
 
+function ccSetUploadStatus(msg) {
+  const el = document.getElementById('cc-upload-status');
+  if (!el) return;
+  // Keep on-page status minimal — full errors go to toast/console only
+  el.textContent = msg || '';
+}
+
 async function ccHandleUpload(input) {
   const file = input.files[0];
   if (!file) return;
-  showToast('Uploading…');
-  const dataUrl = await compressImage(file);
-  const photos  = JSON.parse(sessionStorage.getItem('campusPhotos') || '[]');
-  photos.unshift(dataUrl);
-  sessionStorage.setItem('campusPhotos', JSON.stringify(photos.slice(0, 12)));
-  input.value = '';
-  ccBuildGrid();
-  showToast('📸 Photo added to the campus camera!');
+
+  console.log('[Checkpoint] Campus Camera: file selected —', file.name, file.type, file.size + ' bytes');
+
+  const validationError = validateCampusImageFile(file);
+  if (validationError) {
+    console.error('[Checkpoint] Campus Camera: upload error —', validationError);
+    showToast(validationError);
+    input.value = '';
+    return;
+  }
+
+  ccSetUploadStatus('uploading…');
+
+  try {
+    const imageUrl = await uploadImageToCloudinary(file);
+    await saveCampusCameraUpload(imageUrl, '');
+    input.value = '';
+    ccSetUploadStatus('photo added!');
+    showToast('photo added!');
+    setTimeout(() => ccSetUploadStatus(''), 3000);
+  } catch (err) {
+    const msg = err.message || 'Upload failed. Please try again.';
+    console.error('[Checkpoint] Campus Camera: upload error —', msg);
+    ccSetUploadStatus('');
+    showToast(msg);
+    input.value = '';
+  }
 }
 
 function ccBuildGrid() {
   const grid = document.getElementById('cc-grid');
   if (!grid) return;
-  const photos = JSON.parse(sessionStorage.getItem('campusPhotos') || '[]');
-  grid.innerHTML = Array.from({ length: 6 }, (_, i) =>
-    photos[i]
-      ? `<div class="cc-frame">
-           <img src="${photos[i]}" alt="Campus photo">
-           <button class="cc-del" onclick="ccDeletePhoto(${i})" title="Remove photo">✕</button>
-         </div>`
-      : `<div class="cc-frame cc-empty"></div>`
-  ).join('');
+
+  const deletedUrls = JSON.parse(sessionStorage.getItem('cc_deleted_urls') || '[]');
+  const allUploads  = typeof getCampusCameraUploads === 'function' ? getCampusCameraUploads() : [];
+  const uploads     = allUploads.filter(e => !deletedUrls.includes(e.imageUrl || e.id || ''));
+
+  grid.innerHTML = Array.from({ length: 6 }, (_, i) => {
+    const entry = uploads[i];
+    const slotClass = `photo-slot photo-slot-${i + 1}`;
+    if (!entry || !entry.imageUrl) {
+      return `<div class="${slotClass}"></div>`;
+    }
+    const alt = entry.caption ? entry.caption.replace(/"/g, '&quot;') : 'Campus photo';
+    const key = entry.imageUrl || entry.id || '';
+    return `<div class="${slotClass}">
+              <img src="${entry.imageUrl}" alt="${alt}" loading="lazy">
+              <button class="photo-del" onclick="ccDeletePhoto('${key.replace(/'/g,"\\'")}')">✕</button>
+            </div>`;
+  }).join('');
 }
 
-function ccDeletePhoto(i) {
-  const photos = JSON.parse(sessionStorage.getItem('campusPhotos') || '[]');
-  photos.splice(i, 1);
-  sessionStorage.setItem('campusPhotos', JSON.stringify(photos));
+function ccDeletePhoto(key) {
+  const deletedUrls = JSON.parse(sessionStorage.getItem('cc_deleted_urls') || '[]');
+  if (!deletedUrls.includes(key)) deletedUrls.push(key);
+  sessionStorage.setItem('cc_deleted_urls', JSON.stringify(deletedUrls));
   ccBuildGrid();
 }
 
@@ -1073,34 +1243,34 @@ function openNoticeBoard() {
   document.getElementById('screen-noticeboard').classList.add('active');
 }
 function closeNoticeBoard() {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-world').classList.add('active');
   if (activeDrop) closeDrop();
+  showScreen('world');   // uses showScreen so initMapBoy() fires correctly
 }
 
 function buildNoticeBoardPins() {
-  const drops = getDrops().slice(0, 6);  // show the 6 most recent live drops
+  const notes = typeof getNoticeBoardNotes === 'function'
+    ? getNoticeBoardNotes()
+    : [];
 
   for (let i = 0; i < 6; i++) {
     const slot = document.getElementById('nb-slot-' + i);
     if (!slot) continue;
-    const drop = drops[i];
+    const note = notes[i];
 
-    if (!drop) { slot.innerHTML = ''; slot.onclick = null; continue; }
-
-    if (drop.type === 'photo') {
-      slot.innerHTML = `<img class="nb-slot-thumb" src="${drop.content}" alt="photo" loading="lazy">`;
-    } else {
-      let icon = '', text = '';
-      if (drop.type === 'song' || drop.type === 'playlist') { icon = '🎵'; text = drop.caption || 'A music drop'; }
-      else if (drop.type === 'tiktok')  { icon = '🎵'; text = drop.caption || 'A TikTok drop'; }
-      else if (drop.type === 'video')   { icon = '🎬'; text = drop.caption || 'A video drop'; }
-      else { text = drop.content.length > 80 ? drop.content.slice(0, 80) + '…' : drop.content; }
-      slot.innerHTML = (icon ? `<div class="nb-slot-icon">${icon}</div>` : '') +
-                       `<div class="nb-slot-text">${text}</div>`;
+    if (!note || !note.text) {
+      slot.innerHTML = '';
+      slot.onclick = null;
+      continue;
     }
 
-    slot.onclick = () => openDrop(drop.id);
+    const text = note.text.length > 120 ? note.text.slice(0, 120) + '…' : note.text;
+    const date = parseFirestoreDate(note.createdAt);
+    const dateStr = date ? formatDate(date.toISOString()) : '';
+
+    slot.innerHTML =
+      `<div class="nb-slot-text">${text.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` +
+      (dateStr ? `<div class="nb-slot-date">${dateStr}</div>` : '');
+    slot.onclick = null;
   }
 }
 
@@ -1108,28 +1278,24 @@ async function submitNoticeBoardNote() {
   const inp = document.getElementById('nb-note-input');
   const btn = document.getElementById('nb-post-btn');
   const text = inp ? inp.value.trim() : '';
-  if (!text) { showToast('Write something first ✏️'); return; }
 
-  // Clear input and disable button immediately so the user sees feedback
-  inp.value = '';
+  if (!text) { showToast('Write something first ✏️'); return; }
+  if (text.length > 200) { showToast('Notes must be 200 characters or less'); return; }
+
   if (btn) btn.disabled = true;
 
-  const drop = {
-    id:        'nb' + Date.now(),
-    type:      'text',
-    content:   text,
-    caption:   null,
-    mood:      'peaceful',
-    area:      'corner',
-    timestamp: new Date().toISOString(),
-    username:  'anonymous student',
-    position:  { x: 56 + Math.random() * 40, y: 56 + Math.random() * 28 },
-  };
-
-  await saveUserDrop(drop);   // adds to _cache immediately, then saves to Supabase
-  buildNoticeBoardPins();     // refresh all 6 slots — newest note now in slot 0
-  if (btn) btn.disabled = false;
-  showToast('📌 Note posted to the board!');
+  try {
+    await saveNoticeBoardNote(text);
+    inp.value = '';
+    showToast('📌 Note posted to the board!');
+    console.log('[Checkpoint] Notice Board note posted');
+  } catch (err) {
+    const msg = err.message || 'Could not post note. Try again.';
+    console.error('[Checkpoint] Notice Board post failed:', msg);
+    showToast(msg);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
 }
 
 // ── Walk the avatar to a map % position, then fire onArrival
@@ -1155,11 +1321,29 @@ function showLeaveDropPage() {
   document.getElementById('leave-page-success').style.display = 'none';
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-leave-page').classList.add('active');
+  currentScreen = 'leave-page';
 }
 
 function backToMap() {
+  if (typeof YourDrops !== 'undefined' && typeof YourDrops.closePage === 'function') {
+    YourDrops.closePage();
+  }
+
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-world').classList.add('active');
+
+  const world = document.getElementById('screen-world');
+  if (world) world.classList.add('active');
+
+  currentScreen = 'world';
+
+  // Clear stale keyboard state so movement works immediately
+  Object.keys(mapKeys).forEach(k => { delete mapKeys[k]; });
+  mapBoyTarget = null;
+  mapBoyArrivalCb = null;
+
+  if (document.activeElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+  }
 }
 
 function selectLpMood(mood) {
@@ -1180,6 +1364,7 @@ async function submitLeavePageDrop() {
   else if (/\.(jpe?g|png|gif|webp)$/i.test(raw))                   { type = 'photo'; }
 
   await _saveLpDrop(type, content);
+  if (typeof YourDrops !== 'undefined') YourDrops.addFromUrl(raw);
 }
 
 
@@ -1596,12 +1781,15 @@ function showStudyLobby() {
   stopStudyMusic();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-study').classList.add('active');
+  currentScreen = 'study';
+  renderStudyOnlineList();
 }
 function backFromStudy() {
   stopStudyTimer();
   stopStudyMusic();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-world').classList.add('active');
+  currentScreen = 'world';
   const ambient = document.getElementById('ambient-audio');
   if (ambient && !audioMuted && audioStarted) ambient.play().catch(() => {});
 }
@@ -1663,6 +1851,8 @@ function confirmStudyTimer() {
   // Swap start button → countdown display
   document.getElementById('study-start-btn').style.display   = 'none';
   document.getElementById('study-timer-display').style.display = 'flex';
+  const online = document.getElementById('study-laptop-online');
+  if (online) online.style.display = 'none';
   _tickStudyTimer();
   if (studyTimerInterval) clearInterval(studyTimerInterval);
   studyTimerInterval = setInterval(_tickStudyTimer, 1000);
@@ -1713,6 +1903,8 @@ function _resetStudyTimer() {
   studyTimerSeconds = 0;
   document.getElementById('study-start-btn').style.display    = '';
   document.getElementById('study-timer-display').style.display = 'none';
+  const online = document.getElementById('study-laptop-online');
+  if (online) online.style.display = '';
   const el = document.getElementById('study-timer-count');
   if (el) el.textContent = '00:00';
 }
