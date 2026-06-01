@@ -826,7 +826,7 @@ function wireEvents() {
       else if (meadowOpen)  closeMeadow();
       else if (document.getElementById('panel-canvas').classList.contains('open'))       closeCanvasRoom();
       else if (document.getElementById('panel-library').classList.contains('open'))      closeLibrary();
-      else if (document.getElementById('screen-noticeboard').classList.contains('active')) closeNoticeBoard();
+      else if (document.getElementById('screen-noticeboard').classList.contains('active')) { backToMap(); return; }
       else if (document.getElementById('screen-camera').classList.contains('active'))    backFromCamera();
     }
   });
@@ -840,13 +840,6 @@ function wireEvents() {
   });
 
   buildSparkles();
-
-  // Notice board back button — mousedown fires before focusin so nothing can block it
-  const nbBack = document.getElementById('nb-back');
-  if (nbBack) {
-    nbBack.addEventListener('mousedown', e => { e.preventDefault(); closeNoticeBoard(); });
-    nbBack.addEventListener('touchend',  e => { e.preventDefault(); closeNoticeBoard(); });
-  }
 
   // ── Notice board keyboard guard ───────────────────────────────
   // When the notice board screen is active, ALL keyboard input is
@@ -902,9 +895,15 @@ function wireEvents() {
     }
   }, true);
 
-  // Notice board post button — wired in JS so it always fires
+  // Notice board post button — single listener only (no inline onclick)
   const nbPost = document.getElementById('nb-post-btn');
-  if (nbPost) nbPost.addEventListener('click', () => submitNoticeBoardNote());
+  if (nbPost) {
+    nbPost.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      submitNoticeBoardNote(e);
+    });
+  }
 
   // Disable post button when textarea is empty, enable when it has text
   const nbTa = document.getElementById('nb-note-input');
@@ -924,7 +923,7 @@ function wireEvents() {
     nbInput.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        submitNoticeBoardNote();
+        submitNoticeBoardNote(e);
       }
     });
   }
@@ -1326,78 +1325,218 @@ async function submitSelfie() {
 // ══════════════════════════════════════════════════════════════════
 
 // ── NOTICE BOARD ──────────────────────────────────────────────
-// Round-robin slot index — fills top-left → bottom-right, then wraps
-let nbNextSlot = 0;
-
-// The 6 illustrated sticky note slot IDs in display order
+const NB_STORAGE_KEY = 'checkpointNoticeBoardSlots';
+const NB_DELETED_IDS_KEY = 'checkpointNoticeBoardDeletedIds';
 const NB_SLOTS = ['nb-slot-0','nb-slot-1','nb-slot-2','nb-slot-3','nb-slot-4','nb-slot-5'];
+let _nbIsPosting = false;
+
+function _nbLoadDeletedIds() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(NB_DELETED_IDS_KEY) || '[]');
+    return new Set(Array.isArray(raw) ? raw.filter(Boolean) : []);
+  } catch (_) { /* ignore */ }
+  return new Set();
+}
+
+function _nbMarkDeleted(firebaseId) {
+  if (!firebaseId) return;
+  const set = _nbLoadDeletedIds();
+  set.add(firebaseId);
+  localStorage.setItem(NB_DELETED_IDS_KEY, JSON.stringify([...set]));
+}
+
+function _nbCompactSlots(slots) {
+  const filled = slots.filter(s => s && s.text);
+  while (filled.length < 6) filled.push(null);
+  return filled.slice(0, 6);
+}
+
+function _nbLoadSlots() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(NB_STORAGE_KEY) || 'null');
+    if (Array.isArray(raw) && raw.length === 6) {
+      return raw.map(entry => _nbNormalizeEntry(entry));
+    }
+  } catch (_) { /* ignore */ }
+  return [null, null, null, null, null, null];
+}
+
+function _nbNormalizeEntry(entry) {
+  if (!entry) return null;
+  const text = String(entry.text != null ? entry.text : entry).trim();
+  if (!text) return null;
+  const out = { text, ts: entry.ts || Date.now() };
+  if (entry.firebaseId) out.firebaseId = entry.firebaseId;
+  return out;
+}
+
+function _nbSaveSlots(slots) {
+  localStorage.setItem(NB_STORAGE_KEY, JSON.stringify(slots));
+}
+
+function _nbFirstEmptyIndex(slots) {
+  return slots.findIndex(s => !s || !s.text);
+}
+
+function _nbClearAllNotes() {
+  document.querySelectorAll('#screen-noticeboard .note-text').forEach(el => {
+    if (!el.closest('.sticky-note')) el.remove();
+  });
+  document.querySelectorAll('#screen-noticeboard .nb-slot-text').forEach(el => el.remove());
+  document.querySelectorAll('#nb-wrap > .note-text, #nb-wrap > .nb-slot-text').forEach(el => el.remove());
+  document.querySelectorAll('#nb-wrap .sticky-note').forEach(el => { el.innerHTML = ''; });
+}
+
+function _nbMergeFirebase(slots) {
+  if (typeof getNoticeBoardNotes !== 'function') return _nbCompactSlots(slots);
+
+  const deleted = _nbLoadDeletedIds();
+  const remote = getNoticeBoardNotes().filter(n => {
+    if (!n || !String(n.text || '').trim()) return false;
+    return !deleted.has(n.id);
+  });
+  if (!remote.length) return _nbCompactSlots(slots);
+
+  const merged = _nbCompactSlots(slots);
+  const usedIds = new Set(
+    merged.filter(s => s && s.firebaseId).map(s => s.firebaseId)
+  );
+  const usedTexts = new Set(
+    merged.filter(s => s && s.text).map(s => s.text)
+  );
+
+  const ordered = [...remote].reverse();
+  let ri = 0;
+  for (let i = 0; i < 6 && ri < ordered.length; i++) {
+    if (!merged[i] || !merged[i].text) {
+      while (ri < ordered.length) {
+        const note = ordered[ri++];
+        if (!note || usedIds.has(note.id) || deleted.has(note.id)) continue;
+        const remoteText = String(note.text || '').trim();
+        if (!remoteText || usedTexts.has(remoteText)) continue;
+        merged[i] = _nbNormalizeEntry({
+          text: remoteText,
+          ts: Date.now(),
+          firebaseId: note.id,
+        });
+        usedIds.add(note.id);
+        usedTexts.add(remoteText);
+        break;
+      }
+    }
+  }
+  return merged;
+}
+
+function _nbFitSlotText(stickyEl) {
+  const el = stickyEl?.querySelector('.note-text');
+  if (!el) return;
+
+  let fs = 26;
+  const minFs = 14;
+  el.style.fontSize = '';
+
+  const computed = parseFloat(window.getComputedStyle(el).fontSize) || 18;
+  fs = Math.round(computed);
+
+  const maxH = stickyEl.clientHeight * 0.85;
+  let guard = 0;
+  while (guard++ < 18 && fs > minFs && el.scrollHeight > maxH) {
+    fs -= 1;
+    el.style.fontSize = fs + 'px';
+  }
+}
+
+function _nbRenderSlot(stickyEl, note, slotIndex) {
+  if (!stickyEl || !stickyEl.classList.contains('sticky-note')) return;
+
+  const text = note && note.text ? String(note.text).trim() : '';
+  stickyEl.innerHTML = '';
+  if (!text) return;
+
+  const textEl = document.createElement('div');
+  textEl.className = 'note-text';
+  textEl.textContent = text;
+  stickyEl.appendChild(textEl);
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'note-delete';
+  delBtn.setAttribute('aria-label', 'Delete note');
+  delBtn.textContent = '×';
+  delBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    deleteNoticeBoardNoteAtSlot(slotIndex);
+  });
+  stickyEl.appendChild(delBtn);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => _nbFitSlotText(stickyEl));
+  });
+}
 
 function openNoticeBoard() {
-  buildNoticeBoardPins();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-noticeboard').classList.add('active');
+  document.getElementById('screen-noticeboard')?.classList.add('active');
+  currentScreen = 'noticeboard';
+  setTimeout(() => buildNoticeBoardPins(), 50);
 }
 
 function closeNoticeBoard() {
-  if (activeDrop) closeDrop();
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-world').classList.add('active');
-  currentScreen = 'world';
-  Object.keys(mapKeys).forEach(k => { delete mapKeys[k]; });
-  if (document.activeElement && document.activeElement !== document.body) {
-    document.activeElement.blur();
-  }
-  setTimeout(() => initMapBoy(), 80);
-}
-
-function _nbPreview(drop) {
-  // Returns a short readable label for any drop type
-  if (drop.type === 'song' || drop.type === 'playlist') return '🎵 ' + (drop.caption || 'a music drop');
-  if (drop.type === 'tiktok')  return '🎵 ' + (drop.caption || 'TikTok');
-  if (drop.type === 'video')   return '🎬 ' + (drop.caption || 'a video');
-  if (drop.type === 'photo')   return '📸 ' + (drop.caption || 'a photo');
-  if (drop.type === 'text') {
-    try {
-      return '🔗 ' + new URL(drop.content).hostname.replace('www.', '');
-    } catch {
-      const t = drop.content || '';
-      return t.length > 80 ? t.slice(0, 78) + '…' : t;
-    }
-  }
-  return drop.caption || drop.content || '';
+  backToMap();
 }
 
 function buildNoticeBoardPins() {
-  const notes = typeof getNoticeBoardNotes === 'function'
-    ? getNoticeBoardNotes()
-    : [];
+  const wrap = document.getElementById('nb-wrap');
+  if (!wrap) return;
 
-  let filled = 0;
-  for (let i = 0; i < 6; i++) {
-    const slot = document.getElementById('nb-slot-' + i);
-    if (!slot) continue;
-    const note = notes[i];
-
-    if (!note || !note.text) {
-      slot.innerHTML = '';
-      continue;
-    }
-
-    filled++;
-    const text = note.text.length > 120 ? note.text.slice(0, 120) + '…' : note.text;
-    const date = parseFirestoreDate(note.createdAt);
-    const dateStr = date ? formatDate(date.toISOString()) : '';
-
-    slot.innerHTML =
-      `<div class="nb-slot-text">${text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>` +
-      (dateStr ? `<div class="nb-slot-date">${dateStr}</div>` : '');
-  }
-
-  nbNextSlot = Math.min(filled, 5);
-  if (filled >= 6) nbNextSlot = 0;
+  _nbClearAllNotes();
+  const slots = _nbCompactSlots(_nbMergeFirebase(_nbLoadSlots()));
+  _nbSaveSlots(slots);
+  NB_SLOTS.forEach((id, i) => {
+    _nbRenderSlot(document.getElementById(id), slots[i], i);
+  });
 }
 
-async function submitNoticeBoardNote() {
+async function deleteNoticeBoardNoteAtSlot(slotIndex) {
+  if (slotIndex < 0 || slotIndex > 5) return;
+
+  const slots = _nbLoadSlots();
+  const note = slots[slotIndex];
+  if (!note || !note.text) return;
+
+  let firebaseId = note.firebaseId;
+  if (!firebaseId && typeof getNoticeBoardNotes === 'function') {
+    const match = getNoticeBoardNotes().find(n => n && n.text === note.text);
+    if (match) firebaseId = match.id;
+  }
+
+  if (firebaseId) {
+    _nbMarkDeleted(firebaseId);
+    if (typeof deleteNoticeBoardNote === 'function') {
+      deleteNoticeBoardNote(firebaseId).catch(err => {
+        console.warn('[Checkpoint] Notice board Firebase delete failed:', err.message);
+      });
+    }
+  }
+
+  slots[slotIndex] = null;
+  const compacted = _nbCompactSlots(slots);
+  _nbSaveSlots(compacted);
+
+  _nbClearAllNotes();
+  compacted.forEach((entry, i) => {
+    _nbRenderSlot(document.getElementById(NB_SLOTS[i]), entry, i);
+  });
+
+  showToast('Note removed');
+}
+
+async function submitNoticeBoardNote(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  if (_nbIsPosting) return;
+
   const inp  = document.getElementById('nb-note-input');
   const btn  = document.getElementById('nb-post-btn');
   const text = inp ? inp.value.trim() : '';
@@ -1406,34 +1545,40 @@ async function submitNoticeBoardNote() {
   if (text.length > 200) { showToast('Notes must be 200 characters or less'); return; }
   if (btn && btn.classList.contains('nb-btn-empty')) return;
 
-  // Optimistic round-robin placement
-  const slotId = NB_SLOTS[nbNextSlot];
-  const slot   = document.getElementById(slotId);
-  if (slot) {
-    const display = text.length > 120 ? text.slice(0, 120) + '…' : text;
-    const safe = display.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    slot.innerHTML = `<div class="nb-slot-text">${safe}</div>`;
-  }
-  nbNextSlot = (nbNextSlot + 1) % NB_SLOTS.length;
-
-  if (inp) {
-    inp.value = '';
-    inp.dispatchEvent(new Event('input'));
-  }
-
-  if (btn) btn.disabled = true;
+  _nbIsPosting = true;
 
   try {
-    await saveNoticeBoardNote(text);
-    showToast('📌 Note posted to the board!');
-    buildNoticeBoardPins();
-  } catch (err) {
-    const msg = err.message || 'Could not post note. Try again.';
-    console.error('[Checkpoint] Notice Board post failed:', msg);
-    showToast(msg);
-    buildNoticeBoardPins();
+    const slots = _nbCompactSlots(_nbLoadSlots());
+    let idx = _nbFirstEmptyIndex(slots);
+    if (idx < 0) idx = 0;
+
+    slots[idx] = { text, ts: Date.now() };
+    _nbSaveSlots(slots);
+
+    _nbRenderSlot(document.getElementById(NB_SLOTS[idx]), slots[idx], idx);
+
+    if (inp) {
+      inp.value = '';
+      inp.dispatchEvent(new Event('input'));
+    }
+
+    showToast('📌 Note posted!');
+
+    if (typeof saveNoticeBoardNote === 'function') {
+      saveNoticeBoardNote(text).then(firebaseId => {
+        if (!firebaseId) return;
+        const updated = _nbCompactSlots(_nbLoadSlots());
+        const slot = updated.find(s => s && s.text === text && !s.firebaseId);
+        if (slot) {
+          slot.firebaseId = firebaseId;
+          _nbSaveSlots(updated);
+        }
+      }).catch(err => {
+        console.warn('[Checkpoint] Notice board Firebase save failed:', err.message);
+      });
+    }
   } finally {
-    if (btn) btn.disabled = false;
+    setTimeout(() => { _nbIsPosting = false; }, 500);
   }
 }
 
@@ -1467,6 +1612,8 @@ function backToMap() {
   if (typeof YourDrops !== 'undefined' && typeof YourDrops.closePage === 'function') {
     YourDrops.closePage();
   }
+
+  if (activeDrop) closeDrop();
 
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
 

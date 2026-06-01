@@ -370,15 +370,15 @@
     <img id="nb-bg" src="img/Notice%20Board/Notice%20Board.png" alt="Notice Board"/>
 
     <!-- Back to map -->
-    <button id="nb-back" onclick="closeNoticeBoard()" aria-label="Back to map"></button>
+    <button type="button" id="nb-back" onclick="backToMap()" aria-label="Back to map"></button>
 
-    <!-- Text overlaid on the 6 illustrated sticky notes -->
-    <div class="nb-slot" id="nb-slot-0"></div>
-    <div class="nb-slot" id="nb-slot-1"></div>
-    <div class="nb-slot" id="nb-slot-2"></div>
-    <div class="nb-slot" id="nb-slot-3"></div>
-    <div class="nb-slot" id="nb-slot-4"></div>
-    <div class="nb-slot" id="nb-slot-5"></div>
+    <!-- Sticky note containers — text renders inside each only -->
+    <div class="sticky-note" id="nb-slot-0"></div>
+    <div class="sticky-note" id="nb-slot-1"></div>
+    <div class="sticky-note" id="nb-slot-2"></div>
+    <div class="sticky-note" id="nb-slot-3"></div>
+    <div class="sticky-note" id="nb-slot-4"></div>
+    <div class="sticky-note" id="nb-slot-5"></div>
 
     <!-- Clip wrapper — hard-clips textarea to the illustrated white box -->
     <div id="nb-input-clip">
@@ -386,7 +386,7 @@
                 maxlength="200"
                 placeholder="leave a thought…"></textarea>
     </div>
-    <button id="nb-post-btn" onclick="submitNoticeBoardNote()"></button>
+    <button type="button" id="nb-post-btn"></button>
 
   </div>
 </div>

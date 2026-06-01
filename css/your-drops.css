@@ -63,7 +63,7 @@
 /* ── Invisible hit-target over illustrated "← back to map" ── */
 #yd-back {
   position: absolute;
-  top: 1.5%;
+  top: calc(1.5% + 22px);
   left: 0.5%;
   width: 12%;
   height: 6%;
@@ -72,6 +72,13 @@
   border: none;
   cursor: pointer;
   padding: 0;
+}
+
+#yd-back:hover,
+#yd-back:focus,
+#yd-back:active {
+  background: transparent;
+  outline: none;
 }
 
 .yd-top-right {

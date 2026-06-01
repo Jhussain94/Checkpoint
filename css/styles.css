@@ -6,6 +6,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'UglyDaveRegular';
+  src: url('../assets/fonts/UglyDaveRegular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -949,7 +957,8 @@ html, body {
 /* Back to map hit-target — over the "< back to map" text */
 #study-back {
   position: absolute;
-  top: 1.5%; left: 0.5%;
+  top: calc(1.5% + 22px);
+  left: 0.5%;
   width: 16%; height: 6%;
   z-index: 20;
   background: transparent; border: none; cursor: pointer;
@@ -1222,7 +1231,7 @@ html, body {
 /* ── Invisible hit-target over the illustrated "← back to map" text ── */
 #leave-page-back {
   position: absolute;
-  top: 1.5%;
+  top: calc(1.5% + 22px);
   left: 0.5%;
   width: 12%;
   height: 6%;
@@ -1380,7 +1389,8 @@ html, body {
 }
 #cc-back {
   position: absolute;
-  top: 1.5%; left: 0.5%;
+  top: calc(1.5% + 22px);
+  left: 0.5%;
   width: 14%; height: 6%;
   background: transparent; border: none; cursor: pointer; z-index: 20;
 }
@@ -1698,7 +1708,7 @@ html, body {
   /* ── Notice board ── */
   .noticeboard-inner   { padding: 16px 14px 24px; max-height: 90vh; }
   .noticeboard-pins    { gap: 10px; justify-content: center; }
-  .sticky-note         { width: 140px; min-height: 120px; font-size: 0.76rem; padding: 12px 10px 8px; }
+  .noticeboard-pins .sticky-note { width: 140px; min-height: 120px; font-size: 0.76rem; padding: 12px 10px 8px; }
 
   /* ── Camera compass ── */
   .camera-panel-inner  { padding: 16px 14px 24px; max-height: 90vh; }
@@ -1844,11 +1854,27 @@ html, body {
 #screen-noticeboard {
   background: #3a5c3a;
   display: flex; align-items: center; justify-content: center;
+  z-index: 40;
 }
+
+#screen-noticeboard:not(.active) {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  z-index: -1 !important;
+}
+
+#screen-noticeboard.active {
+  display: flex;
+  pointer-events: auto;
+  visibility: visible;
+  z-index: 40;
+}
+
 #nb-wrap {
   position: relative;
-  aspect-ratio: 1008 / 720;
-  width: min(100vw, calc(100vh * 1008 / 720));
+  aspect-ratio: 3508 / 2480;
+  width: min(calc(100vw - 56px), calc((100vh - 48px) * 3508 / 2480));
   height: auto;
   overflow: hidden;
   border-radius: 22px;
@@ -1858,79 +1884,154 @@ html, body {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: fill; display: block;
+  z-index: 1;
+  pointer-events: none;
 }
 #nb-back {
   position: absolute;
-  top: 3%; left: 1.5%;
-  width: 15%; height: 4%;
+  top: calc(2.4% + 26px);
+  left: 2%;
+  width: 16%;
+  height: 4.5%;
   background: transparent; border: none; cursor: pointer; z-index: 30;
-  border-radius: 4px;
-  transition: background 0.15s;
+  pointer-events: auto;
 }
-#nb-back:hover { background: rgba(0,0,0,0.10); }
+
+/* Invisible back-to-map hit targets — no hover/focus overlay */
+#nb-back:hover,
+#nb-back:focus,
+#nb-back:active,
+#leave-page-back:hover,
+#leave-page-back:focus,
+#leave-page-back:active,
+#study-back:hover,
+#study-back:focus,
+#study-back:active,
+#cc-back:hover,
+#cc-back:focus,
+#cc-back:active {
+  background: transparent;
+  outline: none;
+}
 
 /* Post button disabled — not-allowed cursor when textarea is empty */
 #nb-post-btn { transition: opacity 0.2s; }
 #nb-post-btn.nb-btn-empty { cursor: not-allowed; opacity: 0.55; }
 
-/* ── Slots — transparent overlays on the 6 illustrated sticky notes ── */
-.nb-slot {
+/* ── Sticky notes — anchored to coloured post-its on PSD 3508×2480 ── */
+#nb-wrap .sticky-note {
   position: absolute;
+  width: 14%;
+  height: 24%;
   background: transparent;
   overflow: hidden;
-  z-index: 10;
-  /* top padding clears the illustrated thumb-tack; sides/bottom stay inside note */
-  padding: 22% 9% 6%;
+  z-index: 15;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+  border-radius: 0;
+  cursor: default;
+  min-height: 0;
+  transform: none;
+  transition: none;
+}
+
+#nb-wrap .sticky-note::before {
+  display: none;
+  content: none;
+}
+
+#nb-wrap .sticky-note:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Row 1: green, yellow, pink */
+#nb-slot-0 { left: 43%; top: 18%; }
+#nb-slot-1 { left: 62%; top: 18%; }
+#nb-slot-2 { left: 81%; top: 18%; }
+/* Row 2: pink, blue, yellow */
+#nb-slot-3 { left: 43%; top: 56%; }
+#nb-slot-4 { left: 62%; top: 56%; }
+#nb-slot-5 { left: 81%; top: 56%; }
+
+/* Note text — centred inside sticky note only */
+#nb-wrap .sticky-note .note-text {
+  position: absolute;
+  left: 44%;
+  top: 0;
+  height: 100%;
+  transform: translateX(-50%);
+  width: 78%;
+  max-width: 78%;
+  padding: 10px;
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  pointer-events: none;
-}
-/* Row 1 — measured from Notice Board.png */
-#nb-slot-0 { left: 33%; top: 28%; width: 16%; height: 24%; }
-#nb-slot-1 { left: 50%; top: 25%; width: 17%; height: 25%; }
-#nb-slot-2 { left: 68%; top: 26%; width: 16%; height: 24%; }
-/* Row 2 */
-#nb-slot-3 { left: 33%; top: 56%; width: 16%; height: 23%; }
-#nb-slot-4 { left: 50%; top: 54%; width: 17%; height: 24%; }
-#nb-slot-5 { left: 68%; top: 53%; width: 16%; height: 24%; }
-
-/* Text printed on each illustrated note — clearly readable */
-.nb-slot-text {
-  font-family: 'UglyDave', sans-serif;
-  font-size: clamp(11px, 1.2vw, 17px);
-  line-height: 1.45;
+  justify-content: center;
   text-align: center;
+  font-family: 'UglyDaveRegular', 'UglyDave', sans-serif;
+  color: #31451f;
+  font-size: clamp(14px, 1.2vw, 26px);
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
   word-break: break-word;
   overflow: hidden;
-  width: 100%;
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
-  flex: 1;
+  pointer-events: none;
+  margin: 0;
 }
-.nb-slot-date {
-  font-family: 'UglyDave', sans-serif;
-  font-size: clamp(6px, 0.65vw, 9px);
-  color: rgba(42,26,4,0.45);
-  margin-top: auto;
-  flex-shrink: 0;
-}
-/* Colours that read clearly against each illustrated note's background */
-#nb-slot-0 .nb-slot-text { color: #1e3a10; }   /* on green  */
-#nb-slot-1 .nb-slot-text { color: #3a2600; }   /* on yellow */
-#nb-slot-2 .nb-slot-text { color: #4a1028; }   /* on pink   */
-#nb-slot-3 .nb-slot-text { color: #4a1028; }   /* on pink   */
-#nb-slot-4 .nb-slot-text { color: #0e2040; }   /* on blue   */
-#nb-slot-5 .nb-slot-text { color: #3a2600; }   /* on yellow */
 
-/* Clip wrapper — exactly inside the illustrated white box border */
+#nb-wrap .sticky-note .note-delete {
+  position: absolute;
+  top: 5%;
+  right: 7%;
+  width: clamp(20px, 1.8vw, 28px);
+  height: clamp(20px, 1.8vw, 28px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: 'UglyDaveRegular', 'UglyDave', sans-serif;
+  font-size: clamp(16px, 1.4vw, 22px);
+  line-height: 1;
+  color: rgba(49, 69, 31, 0.5);
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(4deg);
+  opacity: 0.85;
+}
+#nb-wrap .sticky-note .note-delete:hover,
+#nb-wrap .sticky-note .note-delete:focus {
+  color: rgba(49, 69, 31, 0.85);
+  opacity: 1;
+  outline: none;
+}
+
+/* Remove orphaned / legacy text anywhere on the notice board */
+#nb-wrap > .note-text,
+#nb-wrap > .nb-slot-text,
+#screen-noticeboard > .note-text,
+.nb-slot-text {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Clip wrapper — white inner area of beige write box */
 #nb-input-clip {
   position: absolute;
-  left: 6.5%; top: 64.5%;
-  width: 22%; height: 18%;
+  left: 8%;
+  top: 64.5%;
+  width: 14.5%;
+  height: 11.5%;
   overflow: hidden;
   box-sizing: border-box;
   z-index: 20;
@@ -1938,29 +2039,37 @@ html, body {
 #nb-note-input {
   position: absolute;
   inset: 0;
-  width: 100%; height: 100%;
+  width: 100%;
+  height: 100%;
+  font-family: 'UglyDaveRegular', 'UglyDave', sans-serif;
+  color: #354a2e;
   background: transparent;
-  border: none; outline: none; resize: none;
-  font-family: 'UglyDave', sans-serif;
-  font-size: clamp(8px, 0.88vw, 12px);
-  color: #2a1a04;
-  line-height: 1.5;
-  padding: 5px 10px;
+  border: none;
+  outline: none;
+  resize: none;
+  padding-top: 12px;
+  padding-left: 10px;
+  padding-right: 8px;
+  padding-bottom: 6px;
   box-sizing: border-box;
+  font-size: clamp(10px, 1vw, 14px);
+  line-height: 1.4;
   overflow: hidden;
   word-break: break-word;
+  pointer-events: auto;
 }
 #nb-note-input::placeholder {
-  color: rgba(42,26,4,0.30);
-  font-size: clamp(7px, 0.8vw, 10px);
+  color: rgba(53, 74, 46, 0.45);
+  font-size: clamp(9px, 0.95vw, 13px);
 }
 
 /* Post button — transparent hit-target exactly over the green "post anonymously" pill */
 #nb-post-btn {
   position: absolute;
-  left: 6%; top: 85%;
-  width: 21%; height: 4%;
+  left: 5.5%; top: 84%;
+  width: 20%; height: 4%;
   background: transparent; border: none; cursor: pointer; z-index: 25;
+  pointer-events: auto;
 }
 
 .noticeboard-inner {
@@ -2073,7 +2182,7 @@ html, body {
 }
 .cam-pin-btn { width: 100%; margin-top: 4px; }
 
-.sticky-note {
+.noticeboard-pins .sticky-note {
   width: 160px;
   min-height: 140px;
   padding: 14px 12px 10px;
@@ -2089,13 +2198,13 @@ html, body {
   display: flex; flex-direction: column; justify-content: space-between;
   word-break: break-word;
 }
-.sticky-note:hover {
+.noticeboard-pins .sticky-note:hover {
   transform: scale(1.06) rotate(0deg) !important;
   box-shadow: 5px 8px 20px rgba(0,0,0,0.4);
   z-index: 2;
 }
 /* Pin at top */
-.sticky-note::before {
+.noticeboard-pins .sticky-note::before {
   content: '';
   position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
   width: 12px; height: 12px;
@@ -2103,15 +2212,15 @@ html, body {
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
-.sticky-note .sn-text {
+.noticeboard-pins .sticky-note .sn-text {
   flex: 1; font-size: 0.8rem; overflow: hidden;
   display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical;
 }
-.sticky-note .sn-footer {
+.noticeboard-pins .sticky-note .sn-footer {
   margin-top: 8px; font-size: 0.68rem; opacity: 0.6;
   display: flex; justify-content: space-between; align-items: flex-end;
 }
-.sticky-note .sn-mood { font-size: 0.72rem; }
+.noticeboard-pins .sticky-note .sn-mood { font-size: 0.72rem; }
 .sn-yellow  { background: #fef08a; }
 .sn-pink    { background: #fda4af; }
 .sn-blue    { background: #bae6fd; }
