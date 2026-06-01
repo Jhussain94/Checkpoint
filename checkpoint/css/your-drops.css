@@ -1,0 +1,612 @@
+/* ── YOUR DROPS PAGE (Leave a Drop Part 2) ─────────────────────────────── */
+
+#screen-your-drops {
+  background: var(--sky);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+}
+
+#screen-your-drops:not(.active) {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  z-index: -1 !important;
+}
+
+#screen-your-drops.active {
+  display: flex;
+  pointer-events: auto;
+  visibility: visible;
+  z-index: 40;
+}
+
+#yd-wrap {
+  position: relative;
+  aspect-ratio: 3508 / 2480;
+  width: min(calc(100vw - 56px), calc((100vh - 48px) * 3508 / 2480));
+  height: auto;
+  overflow: hidden;
+  border-radius: 22px;
+  box-shadow: 0 10px 48px rgba(42,26,4,0.30), 0 2px 8px rgba(42,26,4,0.12);
+}
+
+#yd-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  display: block;
+  pointer-events: none;
+  user-select: none;
+}
+
+#yd-ui {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  font-family: 'UglyDave', sans-serif;
+  color: #354a2e;
+}
+
+#yd-ui button,
+#yd-ui input,
+#yd-ui select,
+#yd-ui .yd-card,
+#yd-ui .yd-col-card {
+  pointer-events: auto;
+}
+
+/* ── Invisible hit-target over illustrated "← back to map" ── */
+#yd-back {
+  position: absolute;
+  top: 1.5%;
+  left: 0.5%;
+  width: 12%;
+  height: 6%;
+  z-index: 20;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.yd-top-right {
+  position: absolute;
+  right: 4%;
+  top: 3%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.yd-sort-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: clamp(12px, 1.1vw, 16px);
+  pointer-events: auto;
+}
+
+#yd-sort-select {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(12px, 1.1vw, 16px);
+  color: #354a2e;
+  background: rgba(253, 248, 236, 0.85);
+  border: 2px solid #5a6b44;
+  border-radius: 18px 14px 16px 12px;
+  padding: 4px 28px 4px 12px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23354a2e'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.yd-filter-wrap {
+  position: relative;
+  pointer-events: auto;
+}
+
+#yd-filter-btn {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(12px, 1.1vw, 16px);
+  color: #354a2e;
+  background: rgba(253, 248, 236, 0.85);
+  border: 2px solid #5a6b44;
+  border-radius: 14px 18px 12px 16px;
+  padding: 5px 14px;
+  cursor: pointer;
+}
+
+#yd-filter-popup {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  background: rgba(253, 248, 236, 0.96);
+  border: 2px solid #5a6b44;
+  border-radius: 14px 10px 12px 16px;
+  padding: 10px 12px;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 120px;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(42,26,4,0.12);
+}
+
+#yd-filter-popup:not([hidden]) {
+  display: flex;
+}
+
+#yd-filter-popup[hidden] {
+  display: none;
+}
+
+.yd-filter-chip {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(12px, 1vw, 15px);
+  color: #354a2e;
+  background: transparent;
+  border: 1.5px dashed transparent;
+  border-radius: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.yd-filter-chip.active,
+.yd-filter-chip:hover {
+  border-color: #5a6b44;
+  background: rgba(90, 107, 68, 0.12);
+}
+
+/* ── Header ── */
+.yd-header {
+  position: absolute;
+  left: 4%;
+  top: 9%;
+  padding-left: calc(clamp(18px, 1.8vw, 26px) + 8px);
+}
+
+.yd-title {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(22px, 2.4vw, 34px);
+  color: #354a2e;
+  letter-spacing: 0.02em;
+}
+
+/* ── Tabs ── */
+.yd-tabs {
+  position: absolute;
+  left: 4%;
+  top: 14.5%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+}
+
+.yd-tab {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(13px, 1.2vw, 18px);
+  color: #354a2e;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 16px 12px 14px 10px;
+  transition: background 0.15s, transform 0.15s;
+}
+
+.yd-tab:hover {
+  transform: translateY(-1px) rotate(-0.5deg);
+}
+
+.yd-tab.active {
+  background: #5a6b44;
+  color: #fdf8ec;
+}
+
+/* ── Grid ── */
+#yd-grid {
+  position: absolute;
+  left: 4%;
+  top: 20%;
+  width: 92%;
+  height: 42%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: clamp(8px, 1.2vw, 18px);
+}
+
+.yd-card {
+  position: relative;
+  background: rgba(253, 248, 236, 0.92);
+  border: 2.5px solid #5a6b44;
+  border-radius: 22px 16px 20px 14px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+  min-height: 0;
+}
+
+.yd-card:not(.yd-card-empty):hover {
+  transform: rotate(-0.6deg) translateY(-2px);
+}
+
+.yd-card-empty {
+  background: rgba(253, 248, 236, 0.75);
+  pointer-events: none;
+}
+
+.yd-empty-inner {
+  flex: 1;
+  margin: 12%;
+  border: 2px dashed rgba(90, 107, 68, 0.35);
+  border-radius: 12px 16px 10px 14px;
+}
+
+.yd-card-preview {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: rgba(248, 242, 228, 0.9);
+  border-bottom: 2px solid rgba(90, 107, 68, 0.25);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.yd-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.yd-preview-embed {
+  width: 100%;
+  height: 100%;
+  border: none;
+  pointer-events: none;
+}
+
+.yd-preview-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(11px, 1vw, 14px);
+  color: #5a6b44;
+  opacity: 0.85;
+}
+
+.yd-preview-placeholder span:first-child {
+  font-size: clamp(20px, 2vw, 28px);
+}
+
+.yd-play-icon {
+  position: absolute;
+  font-size: clamp(22px, 2.2vw, 32px);
+  color: rgba(53, 74, 46, 0.75);
+  pointer-events: none;
+}
+
+.yd-card-menu-btn {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  z-index: 5;
+  background: rgba(253, 248, 236, 0.8);
+  border: 1.5px solid rgba(90, 107, 68, 0.4);
+  border-radius: 50%;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  color: #354a2e;
+  padding: 0;
+}
+
+.yd-card-menu {
+  position: absolute;
+  top: 34px;
+  right: 8px;
+  z-index: 20;
+  background: rgba(253, 248, 236, 0.98);
+  border: 2px solid #5a6b44;
+  border-radius: 10px 14px 12px 8px;
+  display: flex;
+  flex-direction: column;
+  min-width: 100px;
+  box-shadow: 0 4px 10px rgba(42,26,4,0.1);
+}
+
+.yd-card-menu button {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(11px, 1vw, 14px);
+  color: #354a2e;
+  background: transparent;
+  border: none;
+  padding: 7px 12px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.yd-card-menu button:hover {
+  background: rgba(90, 107, 68, 0.12);
+}
+
+.yd-card-footer {
+  padding: 6px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.yd-card-title {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(11px, 1vw, 14px);
+  color: #354a2e;
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed rgba(90, 107, 68, 0.35);
+  outline: none;
+  width: 100%;
+  padding: 2px 0;
+}
+
+.yd-card-type {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(9px, 0.85vw, 11px);
+  color: rgba(53, 74, 46, 0.65);
+  text-transform: lowercase;
+}
+
+.yd-dragging {
+  opacity: 0.55;
+}
+
+/* ── Pagination ── */
+#yd-pagination {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 63%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.yd-page-num,
+.yd-page-next {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(12px, 1.1vw, 16px);
+  color: #354a2e;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.yd-page-num.active {
+  background: #5a6b44;
+  color: #fdf8ec;
+}
+
+.yd-page-dots {
+  font-family: 'UglyDave', sans-serif;
+  color: #354a2e;
+  opacity: 0.6;
+}
+
+.yd-page-info {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(12px, 1.1vw, 16px);
+  color: rgba(53, 74, 46, 0.7);
+  font-style: italic;
+}
+
+/* ── Collections ── */
+.yd-collections-section {
+  position: absolute;
+  left: 4%;
+  top: 68%;
+  width: 92%;
+}
+
+.yd-collections-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  pointer-events: auto;
+}
+
+.yd-collections-title-wrap {
+  padding-left: calc(clamp(18px, 1.8vw, 26px) + 8px);
+}
+
+.yd-collections-title {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(18px, 1.8vw, 26px);
+  color: #354a2e;
+}
+
+.yd-collections-sub {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(11px, 1vw, 14px);
+  color: rgba(53, 74, 46, 0.75);
+  margin-top: 2px;
+}
+
+#yd-new-collection-btn {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(11px, 1vw, 14px);
+  color: #fdf8ec;
+  background: #5a6b44;
+  border: 2px solid #4a5a36;
+  border-radius: 16px 12px 14px 10px;
+  padding: 6px 14px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s;
+}
+
+#yd-new-collection-btn:hover {
+  transform: translateY(-1px) rotate(0.5deg);
+}
+
+.yd-collections-divider {
+  border: none;
+  border-top: 2px dashed rgba(90, 107, 68, 0.4);
+  margin: 0 0 12px;
+}
+
+#yd-collections-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: clamp(6px, 1vw, 14px);
+  pointer-events: auto;
+}
+
+.yd-col-card {
+  background: rgba(253, 248, 236, 0.88);
+  border: 2px solid #5a6b44;
+  border-radius: 16px 12px 14px 10px;
+  min-height: clamp(60px, 8vw, 90px);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: transform 0.15s, background 0.15s;
+}
+
+.yd-col-card.yd-col-over {
+  background: rgba(90, 107, 68, 0.15);
+  transform: scale(1.02);
+}
+
+.yd-col-slot-empty {
+  pointer-events: none;
+}
+
+.yd-col-dashed {
+  flex: 1;
+  border-bottom: 2px dashed rgba(90, 107, 68, 0.35);
+  margin-top: auto;
+}
+
+.yd-col-name {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(10px, 0.95vw, 13px);
+  color: #354a2e;
+}
+
+.yd-col-drops {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  flex: 1;
+}
+
+.yd-col-chip {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(8px, 0.75vw, 10px);
+  color: #354a2e;
+  background: rgba(90, 107, 68, 0.12);
+  border-radius: 6px;
+  padding: 2px 5px;
+}
+
+.yd-col-empty {
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(8px, 0.75vw, 10px);
+  color: rgba(53, 74, 46, 0.5);
+  font-style: italic;
+}
+
+.yd-col-create {
+  background: rgba(253, 248, 236, 0.75);
+  border: 2px dashed #5a6b44;
+  border-radius: 14px 10px 12px 16px;
+  min-height: clamp(60px, 8vw, 90px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: pointer;
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(10px, 0.95vw, 13px);
+  color: #354a2e;
+  transition: transform 0.15s;
+}
+
+.yd-col-create:hover {
+  transform: rotate(-0.5deg);
+  background: rgba(253, 248, 236, 0.95);
+}
+
+.yd-col-plus {
+  font-size: clamp(18px, 1.8vw, 24px);
+  line-height: 1;
+}
+
+/* Page 1 — view your drops button */
+#leave-page-view-drops {
+  position: absolute;
+  right: 3%;
+  top: 3%;
+  z-index: 25;
+  font-family: 'UglyDave', sans-serif;
+  font-size: clamp(10px, 1vw, 14px);
+  color: #fdf8ec;
+  background: #5a6b44;
+  border: 2px solid #4a5a36;
+  border-radius: 18px 14px 16px 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: transform 0.15s;
+}
+
+#leave-page-view-drops:hover {
+  transform: translateY(-1px) rotate(0.6deg);
+}
+
+@media (max-width: 900px) {
+  #yd-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    height: 48%;
+  }
+
+  #yd-collections-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  #yd-wrap {
+    width: min(calc(100vw - 12px), calc((100vh - 12px) * 3508 / 2480));
+    border-radius: 12px;
+  }
+
+  #yd-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

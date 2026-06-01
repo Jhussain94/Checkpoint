@@ -41,68 +41,6 @@ html, body {
 }
 
 /* ─── SCREEN SYSTEM ─────────────────────────────────────────────────────── */
-/* ─── INTRO OVERLAY — shown once after loading, never again ─────────────── */
-#intro-overlay {
-  position: fixed; inset: 0; z-index: 8000;
-  background: #2c471c;
-  display: flex; align-items: center; justify-content: center;
-  font-family: 'UglyDave', sans-serif;
-  overflow: hidden;
-  transition: opacity 0.5s ease;
-}
-#intro-overlay.intro-fading { opacity: 0; pointer-events: none; }
-
-.intro-flower { position: absolute; pointer-events: none; opacity: 0.65; }
-.intro-fl-tl { top: -25px; left: -25px;  width: clamp(100px,13vw,180px); transform: rotate(-10deg); }
-.intro-fl-tr { top: -15px; right: -25px; width: clamp(90px,11vw,160px);  transform: rotate(15deg) scaleX(-1); }
-.intro-fl-bl { bottom: -25px; left: -15px;  width: clamp(110px,14vw,190px); transform: rotate(8deg); }
-.intro-fl-br { bottom: -15px; right: -25px; width: clamp(100px,13vw,175px); transform: rotate(-15deg) scaleX(-1); }
-
-#intro-card {
-  background: #fdf8ec;
-  border-radius: 22px;
-  padding: clamp(24px,3.5vw,48px) clamp(22px,3.5vw,48px);
-  max-width: min(500px, 88vw);
-  width: 100%;
-  text-align: center;
-  box-shadow: 0 20px 72px rgba(0,0,0,0.48), 0 4px 14px rgba(0,0,0,0.18);
-  position: relative; z-index: 1;
-}
-#intro-icon { font-size: clamp(24px,3.5vw,40px); margin-bottom: 8px; }
-#intro-title {
-  font-family: 'UglyDave', sans-serif;
-  font-size: clamp(28px,5vw,52px);
-  color: #2c471c; letter-spacing: 0.04em; line-height: 1; margin-bottom: 14px;
-}
-#intro-rule {
-  width: 50%; height: 2px; margin: 0 auto 16px;
-  background: linear-gradient(to right, transparent, #c5d848, transparent);
-  border-radius: 1px;
-}
-#intro-list {
-  list-style: none; padding: 0; margin: 0 0 22px;
-  text-align: left; display: flex; flex-direction: column; gap: 8px;
-}
-#intro-list li {
-  font-family: 'UglyDave', sans-serif;
-  font-size: clamp(10px,1.1vw,14px);
-  color: #3a2a08; line-height: 1.5;
-  padding-left: 4px;
-}
-#intro-list strong { color: #2c471c; }
-#intro-btn {
-  background: #4a7a38; color: #fdf8ec;
-  border: none; border-radius: 100px;
-  padding: clamp(10px,1.3vw,14px) clamp(26px,3.5vw,44px);
-  font-family: 'UglyDave', sans-serif;
-  font-size: clamp(13px,1.4vw,18px);
-  letter-spacing: 0.03em; cursor: pointer;
-  box-shadow: 0 4px 0 #2e5a20;
-  transition: transform 0.12s, box-shadow 0.12s;
-}
-#intro-btn:hover  { transform: translateY(-2px); box-shadow: 0 6px 0 #2e5a20; }
-#intro-btn:active { transform: translateY(1px);  box-shadow: 0 2px 0 #2e5a20; }
-
 .screen {
   position: fixed; inset: 0;
   opacity: 0; pointer-events: none;
@@ -1257,30 +1195,24 @@ html, body {
 }
 #lp-drag-zone.drag-over { background: rgba(255,255,255,0.35); }
 
-/* Clip wrapper — exactly over the illustrated white rectangle (red circle area).
-   Starts after the cloud icon, ends before the "drop it" button. */
-#lp-input-clip {
-  position: absolute;
-  left: 16%; top: 58%; width: 54%; height: 11%;
-  overflow: hidden;
-  box-sizing: border-box;
-}
-/* Input fills the clip wrapper — transparent, no added styling */
+/* Inline input — sits over the illustrated white rectangle */
 #lp-url-input {
   position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
-  background: transparent;
+  left: 3%; top: 54%; width: 63%; height: 13%;
+  background: rgba(255, 252, 242, 0.90);
   border: none;
   outline: none;
+  border-radius: 3px;
   font-family: 'UglyDave', sans-serif;
-  font-size: clamp(8px, 0.88vw, 12px);
+  font-size: clamp(7px, 0.85vw, 11px);
+  line-height: 1;
   color: #3a2a08;
-  padding: 0 6px;
+  padding: 0 5px;
   cursor: text;
   box-sizing: border-box;
+  overflow: hidden;
 }
-#lp-url-input::placeholder { color: rgba(90,58,16,0.35); }
+#lp-url-input::placeholder { color: rgba(90,58,16,0.38); }
 
 /* Clickable link rendered inside an opened drop */
 .drop-link-wrap {
@@ -1296,13 +1228,13 @@ html, body {
   cursor: pointer;
 }
 
-/* Drop it button — transparent hit-target over the illustrated green pill */
+/* Green drop it button hit-target */
 .lp-drop-btn {
   position: absolute;
-  left: 72%;
-  top: 58%;
-  width: 22%;
-  height: 11%;
+  left: 68%;
+  top: 54%;
+  width: 28%;
+  height: 13%;
   background: transparent;
   border: none;
   cursor: pointer;
@@ -1848,7 +1780,7 @@ html, body {
 #nb-wrap {
   position: relative;
   aspect-ratio: 1008 / 720;
-  width: min(100vw, calc(100vh * 1008 / 720));
+  width: min(calc(100vw - 56px), calc((100vh - 48px) * 1008 / 720));
   height: auto;
   overflow: hidden;
   border-radius: 22px;
@@ -1861,53 +1793,46 @@ html, body {
 }
 #nb-back {
   position: absolute;
-  top: 3%; left: 1.5%;
-  width: 15%; height: 4%;
-  background: transparent; border: none; cursor: pointer; z-index: 30;
-  border-radius: 4px;
-  transition: background 0.15s;
+  top: 3%; left: 2%;
+  width: 19%; height: 5%;
+  background: transparent; border: none; cursor: pointer; z-index: 20;
 }
-#nb-back:hover { background: rgba(0,0,0,0.10); }
 
-/* Post button disabled — not-allowed cursor when textarea is empty */
-#nb-post-btn { transition: opacity 0.2s; }
-#nb-post-btn.nb-btn-empty { cursor: not-allowed; opacity: 0.55; }
-
-/* ── Slots — transparent overlays on the 6 illustrated sticky notes ── */
+/* ── 6 sticky-note drop slots ── */
+/* Positions measured from the illustration (1008×720) */
 .nb-slot {
   position: absolute;
-  background: transparent;
   overflow: hidden;
   z-index: 10;
-  /* top padding clears the illustrated thumb-tack; sides/bottom stay inside note */
-  padding: 22% 9% 6%;
+  cursor: pointer;
+  padding: 10% 8% 8%;        /* inset from the illustrated note edges */
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  pointer-events: none;
+  display: flex; flex-direction: column; gap: 4%;
 }
-/* Row 1 — measured from Notice Board.png */
-#nb-slot-0 { left: 33%; top: 28%; width: 16%; height: 24%; }
-#nb-slot-1 { left: 50%; top: 25%; width: 17%; height: 25%; }
-#nb-slot-2 { left: 68%; top: 26%; width: 16%; height: 24%; }
-/* Row 2 */
-#nb-slot-3 { left: 33%; top: 56%; width: 16%; height: 23%; }
-#nb-slot-4 { left: 50%; top: 54%; width: 17%; height: 24%; }
-#nb-slot-5 { left: 68%; top: 53%; width: 16%; height: 24%; }
+.nb-slot:empty { pointer-events: none; }
 
-/* Text printed on each illustrated note — clearly readable */
+/* Row 1 */
+#nb-slot-0 { left: 34%;   top: 29%; width: 15%; height: 23%; }
+#nb-slot-1 { left: 51%;   top: 26%; width: 16%; height: 24%; }
+#nb-slot-2 { left: 69%;   top: 27%; width: 15%; height: 23%; }
+/* Row 2 */
+#nb-slot-3 { left: 34%;   top: 57%; width: 15%; height: 22%; }
+#nb-slot-4 { left: 51%;   top: 55%; width: 16%; height: 23%; }
+#nb-slot-5 { left: 69%;   top: 54%; width: 15%; height: 23%; }
+
+.nb-slot-thumb {
+  width: 100%; flex: 1;
+  object-fit: cover; display: block; border-radius: 2px;
+}
 .nb-slot-text {
   font-family: 'UglyDave', sans-serif;
-  font-size: clamp(11px, 1.2vw, 17px);
-  line-height: 1.45;
-  text-align: center;
+  font-size: clamp(7px, 0.78vw, 11px);
+  color: #2a1a04;
+  line-height: 1.35;
   word-break: break-word;
   overflow: hidden;
-  width: 100%;
   display: -webkit-box;
-  -webkit-line-clamp: 5;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   flex: 1;
 }
@@ -1918,49 +1843,35 @@ html, body {
   margin-top: auto;
   flex-shrink: 0;
 }
-/* Colours that read clearly against each illustrated note's background */
-#nb-slot-0 .nb-slot-text { color: #1e3a10; }   /* on green  */
-#nb-slot-1 .nb-slot-text { color: #3a2600; }   /* on yellow */
-#nb-slot-2 .nb-slot-text { color: #4a1028; }   /* on pink   */
-#nb-slot-3 .nb-slot-text { color: #4a1028; }   /* on pink   */
-#nb-slot-4 .nb-slot-text { color: #0e2040; }   /* on blue   */
-#nb-slot-5 .nb-slot-text { color: #3a2600; }   /* on yellow */
-
-/* Clip wrapper — exactly inside the illustrated white box border */
-#nb-input-clip {
-  position: absolute;
-  left: 6.5%; top: 64.5%;
-  width: 22%; height: 18%;
-  overflow: hidden;
-  box-sizing: border-box;
-  z-index: 20;
+.nb-slot-icon {
+  font-size: clamp(14px, 1.8vw, 24px);
+  text-align: center;
 }
+
+/* ── Write-a-note: sits exactly over the illustrated white box ── */
 #nb-note-input {
   position: absolute;
-  inset: 0;
-  width: 100%; height: 100%;
+  left: 5.7%; top: 65%;
+  width: 23.5%; height: 19%;
   background: transparent;
   border: none; outline: none; resize: none;
   font-family: 'UglyDave', sans-serif;
-  font-size: clamp(8px, 0.88vw, 12px);
+  font-size: clamp(8px, 0.92vw, 12px);
   color: #2a1a04;
   line-height: 1.5;
-  padding: 5px 10px;
+  padding: 5px 8px;
   box-sizing: border-box;
-  overflow: hidden;
-  word-break: break-word;
+  z-index: 20;
+  overflow: hidden;          /* text never escapes the white box boundary */
+  display: block;
 }
-#nb-note-input::placeholder {
-  color: rgba(42,26,4,0.30);
-  font-size: clamp(7px, 0.8vw, 10px);
-}
-
-/* Post button — transparent hit-target exactly over the green "post anonymously" pill */
+#nb-note-input::placeholder { color: rgba(42,26,4,0.32); }
+/* ── Post button: over the illustrated green "post anonymously" pill ── */
 #nb-post-btn {
   position: absolute;
-  left: 6%; top: 85%;
-  width: 21%; height: 4%;
-  background: transparent; border: none; cursor: pointer; z-index: 25;
+  left: 6.5%; top: 85.5%;
+  width: 22%; height: 5%;
+  background: transparent; border: none; cursor: pointer; z-index: 20;
 }
 
 .noticeboard-inner {
