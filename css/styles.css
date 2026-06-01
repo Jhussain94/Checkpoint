@@ -1848,7 +1848,7 @@ html, body {
 #nb-wrap {
   position: relative;
   aspect-ratio: 1008 / 720;
-  width: min(calc(100vw - 56px), calc((100vh - 48px) * 1008 / 720));
+  width: min(100vw, calc(100vh * 1008 / 720));
   height: auto;
   overflow: hidden;
   border-radius: 22px;
@@ -1861,10 +1861,17 @@ html, body {
 }
 #nb-back {
   position: absolute;
-  top: 3.8%; left: 2%;
-  width: 13%; height: 2%;   /* tight — covers only the "< back to map" text */
-  background: transparent; border: none; cursor: pointer; z-index: 20;
+  top: 3%; left: 1.5%;
+  width: 15%; height: 4%;
+  background: transparent; border: none; cursor: pointer; z-index: 30;
+  border-radius: 4px;
+  transition: background 0.15s;
 }
+#nb-back:hover { background: rgba(0,0,0,0.10); }
+
+/* Post button disabled — not-allowed cursor when textarea is empty */
+#nb-post-btn { transition: opacity 0.2s; }
+#nb-post-btn.nb-btn-empty { cursor: not-allowed; opacity: 0.55; }
 
 /* ── Slots — transparent overlays on the 6 illustrated sticky notes ── */
 .nb-slot {
@@ -1890,17 +1897,17 @@ html, body {
 #nb-slot-4 { left: 50%; top: 54%; width: 17%; height: 24%; }
 #nb-slot-5 { left: 68%; top: 53%; width: 16%; height: 24%; }
 
-/* Text printed on each illustrated note — big enough to read clearly */
+/* Text printed on each illustrated note — clearly readable */
 .nb-slot-text {
   font-family: 'UglyDave', sans-serif;
-  font-size: clamp(10px, 1.15vw, 16px);
-  line-height: 1.4;
+  font-size: clamp(11px, 1.2vw, 17px);
+  line-height: 1.45;
   text-align: center;
   word-break: break-word;
   overflow: hidden;
   width: 100%;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
 }
 /* Colours that read clearly against each illustrated note's background */
@@ -1911,16 +1918,15 @@ html, body {
 #nb-slot-4 .nb-slot-text { color: #0e2040; }   /* on blue   */
 #nb-slot-5 .nb-slot-text { color: #3a2600; }   /* on yellow */
 
-/* Clip wrapper — sits exactly over the illustrated white writing box */
+/* Clip wrapper — exactly inside the illustrated white box border */
 #nb-input-clip {
   position: absolute;
-  left: 7%; top: 65%;
+  left: 6.5%; top: 64.5%;
   width: 22%; height: 18%;
   overflow: hidden;
   box-sizing: border-box;
   z-index: 20;
 }
-/* Textarea fills the clip — transparent, UglyDave font, text hard-clipped */
 #nb-note-input {
   position: absolute;
   inset: 0;
@@ -1928,14 +1934,18 @@ html, body {
   background: transparent;
   border: none; outline: none; resize: none;
   font-family: 'UglyDave', sans-serif;
-  font-size: clamp(9px, 1vw, 14px);
+  font-size: clamp(8px, 0.88vw, 12px);
   color: #2a1a04;
-  line-height: 1.6;
-  padding: 6px 10px;
+  line-height: 1.5;
+  padding: 5px 10px;
   box-sizing: border-box;
   overflow: hidden;
+  word-break: break-word;
 }
-#nb-note-input::placeholder { color: rgba(42,26,4,0.28); }
+#nb-note-input::placeholder {
+  color: rgba(42,26,4,0.30);
+  font-size: clamp(7px, 0.8vw, 10px);
+}
 
 /* Post button — transparent hit-target exactly over the green "post anonymously" pill */
 #nb-post-btn {

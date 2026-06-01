@@ -841,13 +841,82 @@ function wireEvents() {
 
   buildSparkles();
 
-  // Notice board back button — wired in JS in addition to HTML onclick
+  // Notice board back button — mousedown fires before focusin so nothing can block it
   const nbBack = document.getElementById('nb-back');
-  if (nbBack) nbBack.addEventListener('click', () => closeNoticeBoard());
+  if (nbBack) {
+    nbBack.addEventListener('mousedown', e => { e.preventDefault(); closeNoticeBoard(); });
+    nbBack.addEventListener('touchend',  e => { e.preventDefault(); closeNoticeBoard(); });
+  }
+
+  // ── Notice board keyboard guard ───────────────────────────────
+  // When the notice board screen is active, ALL keyboard input is
+  // restricted to #nb-note-input. Typing anywhere else redirects
+  // focus into the textarea so text can only enter the white box.
+  document.addEventListener('keydown', e => {
+    const screen = document.getElementById('screen-noticeboard');
+    if (!screen || !screen.classList.contains('active')) return;
+
+    const inp = document.getElementById('nb-note-input');
+    if (!inp) return;
+
+    // Allow browser shortcuts, Escape (back), Tab (to post/back buttons)
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === 'Escape' || e.key === 'Tab') return;
+
+    // If focus is already on the textarea, let it handle the key normally
+    if (document.activeElement === inp) return;
+
+    // Any other key typed outside the textarea → steal focus back and
+    // insert the character into the textarea so no input is lost
+    e.preventDefault();
+    e.stopPropagation();
+    inp.focus();
+
+    if (e.key === 'Backspace') {
+      const s = inp.selectionStart, end = inp.selectionEnd;
+      if (s !== end) { inp.value = inp.value.slice(0, s) + inp.value.slice(end); inp.selectionStart = inp.selectionEnd = s; }
+      else if (s > 0) { inp.value = inp.value.slice(0, s - 1) + inp.value.slice(s); inp.selectionStart = inp.selectionEnd = s - 1; }
+    } else if (e.key === 'Enter') {
+      const s = inp.selectionStart;
+      inp.value = inp.value.slice(0, s) + '\n' + inp.value.slice(s);
+      inp.selectionStart = inp.selectionEnd = s + 1;
+    } else if (e.key.length === 1) {
+      const s = inp.selectionStart, end = inp.selectionEnd;
+      inp.value = inp.value.slice(0, s) + e.key + inp.value.slice(end);
+      inp.selectionStart = inp.selectionEnd = s + 1;
+    }
+  }, true); // capture phase so it runs before anything else
+
+  // Prevent clicks outside the textarea from giving focus to other
+  // editable elements while the notice board is visible
+  document.addEventListener('focusin', e => {
+    const screen = document.getElementById('screen-noticeboard');
+    if (!screen || !screen.classList.contains('active')) return;
+    const inp  = document.getElementById('nb-note-input');
+    const post = document.getElementById('nb-post-btn');
+    const back = document.getElementById('nb-back');
+    if (e.target !== inp && e.target !== post && e.target !== back) {
+      // Redirect focus to textarea without preventing default
+      // (preventing default here can block button clicks)
+      setTimeout(() => { if (inp) inp.focus(); }, 0);
+    }
+  }, true);
 
   // Notice board post button — wired in JS so it always fires
   const nbPost = document.getElementById('nb-post-btn');
   if (nbPost) nbPost.addEventListener('click', () => submitNoticeBoardNote());
+
+  // Disable post button when textarea is empty, enable when it has text
+  const nbTa = document.getElementById('nb-note-input');
+  if (nbTa && nbPost) {
+    const _nbSync = () => {
+      const empty = nbTa.value.trim() === '';
+      nbPost.classList.toggle('nb-btn-empty', empty);
+      nbPost.setAttribute('aria-disabled', empty ? 'true' : 'false');
+    };
+    nbTa.addEventListener('input', _nbSync);
+    _nbSync(); // run once on load
+  }
 
   // Post notice board note with Enter (Shift+Enter for newline)
   const nbInput = document.getElementById('nb-note-input');
@@ -1256,18 +1325,29 @@ async function submitSelfie() {
 // NOTICE BOARD
 // ══════════════════════════════════════════════════════════════════
 
-// Sticky note colour palette — cycles through notes
-const NB_COLORS  = ['col-green','col-yellow','col-pink','col-yellow','col-pink','col-blue'];
-const NB_ROTATES = [-2, 1.5, -1, 2, -1.5, 0.5, -0.5, 1, -2, 1];
+// ── NOTICE BOARD ──────────────────────────────────────────────
+// Round-robin slot index — fills top-left → bottom-right, then wraps
+let nbNextSlot = 0;
+
+// The 6 illustrated sticky note slot IDs in display order
+const NB_SLOTS = ['nb-slot-0','nb-slot-1','nb-slot-2','nb-slot-3','nb-slot-4','nb-slot-5'];
 
 function openNoticeBoard() {
   buildNoticeBoardPins();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-noticeboard').classList.add('active');
 }
+
 function closeNoticeBoard() {
   if (activeDrop) closeDrop();
-  showScreen('world');
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-world').classList.add('active');
+  currentScreen = 'world';
+  Object.keys(mapKeys).forEach(k => { delete mapKeys[k]; });
+  if (document.activeElement && document.activeElement !== document.body) {
+    document.activeElement.blur();
+  }
+  setTimeout(() => initMapBoy(), 80);
 }
 
 function _nbPreview(drop) {
@@ -1288,34 +1368,35 @@ function _nbPreview(drop) {
 }
 
 function buildNoticeBoardPins() {
-  // Gather up to 6 items — Firebase notes first, then ALL Supabase drops
-  let notes = [];
+  // Load existing notes into the slots in order (oldest → newest fills round-robin)
+  const combined = [];
 
   if (typeof getNoticeBoardNotes === 'function') {
-    notes = getNoticeBoardNotes()
-      .map(n => n.text || '')
-      .filter(Boolean)
-      .slice(0, 6);
+    getNoticeBoardNotes().forEach(n => {
+      if (n.text) combined.push({ text: n.text, ts: n.createdAt ? new Date(n.createdAt).getTime() : 0 });
+    });
   }
 
-  if (!notes.length) {
-    // Include every drop type — Leave a Drop, photos, links, etc.
-    notes = getDrops()
-      .map(d => _nbPreview(d))
-      .filter(Boolean)
-      .slice(0, 6);
-  }
+  getDrops().forEach(d => {
+    const preview = _nbPreview(d);
+    if (preview) combined.push({ text: preview, ts: d.timestamp ? new Date(d.timestamp).getTime() : 0 });
+  });
 
-  for (let i = 0; i < 6; i++) {
-    const slot = document.getElementById('nb-slot-' + i);
-    if (!slot) continue;
-    if (!notes[i]) { slot.innerHTML = ''; continue; }
-    const safe = notes[i]
-      .replace(/&/g, '&amp;')
-      .replace(/</g,  '&lt;')
-      .replace(/>/g,  '&gt;');
+  // Sort oldest first so they fill slots in arrival order
+  combined.sort((a, b) => a.ts - b.ts);
+  const items = combined.slice(-6); // keep last 6
+
+  NB_SLOTS.forEach((id, i) => {
+    const slot = document.getElementById(id);
+    if (!slot) return;
+    if (!items[i]) { slot.innerHTML = ''; return; }
+    const safe = items[i].text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     slot.innerHTML = `<div class="nb-slot-text">${safe}</div>`;
-  }
+  });
+
+  // Set nextNoteIndex to the next empty slot (or oldest if all full)
+  nbNextSlot = Math.min(items.length, 5);
+  if (items.length >= 6) nbNextSlot = 0; // wrap — will replace slot 0 next
 }
 
 async function submitNoticeBoardNote() {
@@ -1323,15 +1404,32 @@ async function submitNoticeBoardNote() {
   const btn  = document.getElementById('nb-post-btn');
   const text = inp ? inp.value.trim() : '';
 
-  if (!text) { showToast('Write something first ✏️'); return; }
-  if (btn)   btn.disabled = true;
+  if (!text) { showToast('Please write a note first ✏️'); return; }
+  if (btn && btn.classList.contains('nb-btn-empty')) return;
 
+  // ── Place text on the current slot immediately (round-robin) ──
+  const slotId = NB_SLOTS[nbNextSlot];
+  const slot   = document.getElementById(slotId);
+  if (slot) {
+    const safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    slot.innerHTML = `<div class="nb-slot-text">${safe}</div>`;
+  }
+
+  // Advance to next slot, wrapping back to 0 after slot 5
+  nbNextSlot = (nbNextSlot + 1) % NB_SLOTS.length;
+
+  // Clear the text box
+  if (inp) {
+    inp.value = '';
+    inp.dispatchEvent(new Event('input')); // re-sync disable state
+  }
+
+  // Persist to backend (non-blocking — UI already updated above)
   try {
-    // Try Firebase first, fall back to Supabase
     if (typeof saveNoticeBoardNote === 'function') {
       await saveNoticeBoardNote(text);
     } else {
-      const drop = {
+      await saveUserDrop({
         id:        'nb' + Date.now(),
         type:      'text',
         content:   text,
@@ -1341,17 +1439,13 @@ async function submitNoticeBoardNote() {
         timestamp: new Date().toISOString(),
         username:  localStorage.getItem(USERNAME_KEY) || 'anonymous student',
         position:  { x: 56 + Math.random() * 40, y: 56 + Math.random() * 28 },
-      };
-      await saveUserDrop(drop);
+      });
     }
-    if (inp) inp.value = '';
-    buildNoticeBoardPins();     // immediately refresh the sticky notes
-    showToast('📌 Note posted to the board!');
   } catch (err) {
-    showToast(err.message || 'Could not post note. Try again.');
-  } finally {
-    if (btn) btn.disabled = false;
+    console.warn('[Checkpoint] Notice board save failed:', err.message);
   }
+
+  showToast('📌 Note posted!');
 }
 
 // ── Walk the avatar to a map % position, then fire onArrival
