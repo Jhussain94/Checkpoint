@@ -508,14 +508,14 @@
 
     <!-- Transparent hit-target over the illustrated green "start" button -->
     <button id="study-start-btn" onclick="openStudyTimerModal()" aria-label="Start timer"></button>
+    <button id="study-timer-stop" onclick="stopStudyTimer()" aria-label="Stop timer" hidden>■ Stop</button>
 
     <!-- Online users on the laptop screen -->
     <div id="study-laptop-online" aria-live="polite"></div>
 
-    <!-- Countdown overlay — shown when timer is running -->
+    <!-- Countdown — inside the left beige study timer panel -->
     <div id="study-timer-display">
       <div id="study-timer-count">00:00</div>
-      <button id="study-timer-stop" onclick="stopStudyTimer()" aria-label="Stop timer">■ Stop</button>
     </div>
 
     <!-- Music selector — below the timer card -->

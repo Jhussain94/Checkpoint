@@ -885,20 +885,19 @@ function wireEvents() {
   document.addEventListener('focusin', e => {
     const screen = document.getElementById('screen-noticeboard');
     if (!screen || !screen.classList.contains('active')) return;
-    const inp  = document.getElementById('nb-note-input');
-    const post = document.getElementById('nb-post-btn');
-    const back = document.getElementById('nb-back');
-    if (e.target !== inp && e.target !== post && e.target !== back) {
-      // Redirect focus to textarea without preventing default
-      // (preventing default here can block button clicks)
-      setTimeout(() => { if (inp) inp.focus(); }, 0);
-    }
+    const inp = document.getElementById('nb-note-input');
+    if (!inp) return;
+    if (e.target === inp) return;
+    if (e.target.closest('#nb-post-btn, #nb-back, .note-delete')) return;
+    setTimeout(() => { if (inp) inp.focus(); }, 0);
   }, true);
 
-  // Notice board post button — single listener only (no inline onclick)
-  const nbPost = document.getElementById('nb-post-btn');
-  if (nbPost) {
-    nbPost.addEventListener('click', (e) => {
+  // Notice board post button — single delegated listener
+  const nbWrap = document.getElementById('nb-wrap');
+  if (nbWrap && !nbWrap.dataset.nbPostWired) {
+    nbWrap.dataset.nbPostWired = '1';
+    nbWrap.addEventListener('click', (e) => {
+      if (!e.target.closest('#nb-post-btn')) return;
       e.preventDefault();
       e.stopPropagation();
       submitNoticeBoardNote(e);
@@ -906,11 +905,13 @@ function wireEvents() {
   }
 
   // Disable post button when textarea is empty, enable when it has text
+  const nbPost = document.getElementById('nb-post-btn');
   const nbTa = document.getElementById('nb-note-input');
   if (nbTa && nbPost) {
     const _nbSync = () => {
       const empty = nbTa.value.trim() === '';
       nbPost.classList.toggle('nb-btn-empty', empty);
+      nbPost.disabled = empty;
       nbPost.setAttribute('aria-disabled', empty ? 'true' : 'false');
     };
     nbTa.addEventListener('input', _nbSync);
@@ -1543,7 +1544,7 @@ async function submitNoticeBoardNote(e) {
 
   if (!text) { showToast('Write something first ✏️'); return; }
   if (text.length > 200) { showToast('Notes must be 200 characters or less'); return; }
-  if (btn && btn.classList.contains('nb-btn-empty')) return;
+  if (btn && btn.disabled) return;
 
   _nbIsPosting = true;
 
@@ -2134,11 +2135,11 @@ function confirmStudyTimer() {
   cancelStudyTimerModal();
   studyTimerSeconds = Math.round(mins * 60);
 
-  // Swap start button → countdown display
-  document.getElementById('study-start-btn').style.display   = 'none';
+  // Swap start button → countdown + stop overlay
+  document.getElementById('study-start-btn').style.display = 'none';
   document.getElementById('study-timer-display').style.display = 'flex';
-  const online = document.getElementById('study-laptop-online');
-  if (online) online.style.display = 'none';
+  const stopBtn = document.getElementById('study-timer-stop');
+  if (stopBtn) stopBtn.hidden = false;
   _tickStudyTimer();
   if (studyTimerInterval) clearInterval(studyTimerInterval);
   studyTimerInterval = setInterval(_tickStudyTimer, 1000);
@@ -2187,10 +2188,10 @@ function stopStudyTimer() {
 }
 function _resetStudyTimer() {
   studyTimerSeconds = 0;
-  document.getElementById('study-start-btn').style.display    = '';
+  document.getElementById('study-start-btn').style.display = '';
   document.getElementById('study-timer-display').style.display = 'none';
-  const online = document.getElementById('study-laptop-online');
-  if (online) online.style.display = '';
+  const stopBtn = document.getElementById('study-timer-stop');
+  if (stopBtn) stopBtn.hidden = true;
   const el = document.getElementById('study-timer-count');
   if (el) el.textContent = '00:00';
 }

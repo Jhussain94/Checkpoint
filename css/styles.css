@@ -966,7 +966,7 @@ html, body {
 /* Start button hit-target — over the illustrated green "start" pill */
 #study-start-btn {
   position: absolute;
-  left: 7%; top: 48%;
+  left: 7%; top: 46%;
   width: 16%; height: 8%;
   z-index: 20;
   background: transparent; border: none; cursor: pointer;
@@ -1017,40 +1017,55 @@ html, body {
 .study-online-list li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 1; }
 .study-online-list li.is-you { color: #354a2e; }
 
-/* Countdown — centred on the laptop screen */
+/* Countdown — inside the left beige study timer panel */
 #study-timer-display {
   display: none;
   position: absolute;
-  left: 57.2%;
-  top: 55.3%;
-  width: 15%;
-  height: 9.5%;
-  transform: rotate(5deg);
-  transform-origin: top left;
+  left: 6.5%;
+  top: 38%;
+  width: 18%;
+  height: auto;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  z-index: 20;
+  justify-content: flex-start;
+  z-index: 19;
   background: transparent;
-  pointer-events: none;   /* let clicks pass through to the illustration */
+  pointer-events: none;
 }
-#study-timer-display > * { pointer-events: all; }
 #study-timer-count {
   font-family: 'UglyDave', sans-serif;
-  font-size: clamp(18px, 2.8vw, 46px);
+  font-size: clamp(38px, 2.2vw, 46px);
   color: #3a2a08;
   letter-spacing: 0.05em;
-  width: 100%; text-align: center;
+  width: 100%;
+  text-align: center;
+  line-height: 1;
+  margin-top: 20px;
+  margin-bottom: 16px;
 }
 #study-timer-stop {
-  background: #c05030; color: #fff;
-  border: none; border-radius: 9px;
+  display: none;
+  position: absolute;
+  left: 8.8%;
+  top: 46%;
+  width: 12.5%;
+  height: 6%;
+  z-index: 21;
+  background: #c05030;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
   font-family: 'UglyDave', sans-serif;
-  font-size: clamp(11px, 1vw, 15px);
-  cursor: pointer; padding: 5px 14px;
+  font-size: clamp(9px, 0.85vw, 13px);
+  cursor: pointer;
+  padding: 0;
   box-shadow: 0 2px 0 #8a2010;
   transition: transform 0.15s, box-shadow 0.15s;
+  align-items: center;
+  justify-content: center;
+}
+#study-timer-stop:not([hidden]) {
+  display: flex;
 }
 #study-timer-stop:hover  { transform: translateY(-1px); box-shadow: 0 4px 0 #8a2010; }
 #study-timer-stop:active { transform: translateY(1px);  box-shadow: 0 1px 0 #8a2010; }
@@ -1059,6 +1074,7 @@ html, body {
 #study-music-picker {
   position: absolute;
   left: 5.5%; top: 68%;
+  transform: translate(8px, -15px);
   width: 16.5%;           /* 5.5 + 16.5 = 22% — stays inside card right edge */
   display: flex;
   flex-direction: column;
@@ -1963,7 +1979,7 @@ html, body {
 /* Note text — centred inside sticky note only */
 #nb-wrap .sticky-note .note-text {
   position: absolute;
-  left: 44%;
+  left: 40%;
   top: 0;
   height: 100%;
   transform: translateX(-50%);
@@ -2066,10 +2082,16 @@ html, body {
 /* Post button — transparent hit-target exactly over the green "post anonymously" pill */
 #nb-post-btn {
   position: absolute;
-  left: 5.5%; top: 84%;
-  width: 20%; height: 4%;
-  background: transparent; border: none; cursor: pointer; z-index: 25;
+  left: 5%;
+  top: 82.5%;
+  width: 22%;
+  height: 5%;
+  background: transparent; border: none; cursor: pointer; z-index: 30;
   pointer-events: auto;
+}
+#nb-post-btn:disabled {
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .noticeboard-inner {
