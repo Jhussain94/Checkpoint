@@ -49,7 +49,7 @@ html, body {
 }
 
 /* ─── SCREEN SYSTEM ─────────────────────────────────────────────────────── */
-/* ─── INTRO OVERLAY — shown once after loading, never again ─────────────── */
+/* ─── HOW IT WORKS — full-screen step after START, before nickname ───────── */
 #intro-overlay {
   position: fixed; inset: 0; z-index: 8000;
   background: #2c471c;
@@ -1412,7 +1412,7 @@ html, body {
 }
 #cc-upload-btn {
   position: absolute;
-  top: 56%; left: 7%;
+  top: 50%; left: 7%;
   width: 19%; height: 5.5%;
   background: transparent; border: none;
   cursor: pointer;   /* pointer ONLY here — nowhere else on the screen */
@@ -1420,7 +1420,7 @@ html, body {
 }
 #cc-upload-status {
   position: absolute;
-  top: 62%; left: 5%;
+  top: 56%; left: 5%;
   width: 23%;
   margin: 0;
   font-family: 'UglyDave', sans-serif;
@@ -1930,9 +1930,40 @@ html, body {
   outline: none;
 }
 
-/* Post button disabled — not-allowed cursor when textarea is empty */
-#nb-post-btn { transition: opacity 0.2s; }
-#nb-post-btn.nb-btn-empty { cursor: not-allowed; opacity: 0.55; }
+/* Post anonymously — hit zone over green pill (incl. flower) */
+#nb-post-zone {
+  position: absolute;
+  left: 4%;
+  top: 78%;
+  width: 30%;
+  height: 6.5%;
+  z-index: 100;
+  pointer-events: auto;
+  cursor: pointer;
+}
+#nb-post-btn {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 1;
+  transition: opacity 0.2s;
+}
+#nb-post-btn.nb-btn-empty {
+  opacity: 0.55;
+}
+#nb-post-btn:hover,
+#nb-post-btn:focus {
+  cursor: pointer;
+  outline: none;
+}
 
 /* ── Sticky notes — anchored to coloured post-its on PSD 3508×2480 ── */
 #nb-wrap .sticky-note {
@@ -2079,20 +2110,6 @@ html, body {
   font-size: clamp(9px, 0.95vw, 13px);
 }
 
-/* Post button — transparent hit-target exactly over the green "post anonymously" pill */
-#nb-post-btn {
-  position: absolute;
-  left: 5%;
-  top: 82.5%;
-  width: 22%;
-  height: 5%;
-  background: transparent; border: none; cursor: pointer; z-index: 30;
-  pointer-events: auto;
-}
-#nb-post-btn:disabled {
-  cursor: not-allowed;
-  pointer-events: none;
-}
 
 .noticeboard-inner {
   background: #2d5a2a;

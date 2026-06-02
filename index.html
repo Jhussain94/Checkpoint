@@ -33,7 +33,7 @@
     <button id="start-btn"
             aria-label="Enter the world"
             disabled
-            onclick="transitionTo('nickname')">
+            onclick="transitionToIntro()">
     </button>
 
     <!-- Boy walk — wrapper clips; each img shifted so character stays centred -->
@@ -61,7 +61,7 @@
 
 
 <!-- ──────────────────────────────────────────────────────────────
-     SCREEN 2 — NICKNAME (after START, before map)
+     SCREEN 2 — NICKNAME (after How It Works, before map)
 ────────────────────────────────────────────────────────────────── -->
 <div class="screen" id="screen-nickname">
   <div id="nickname-img-wrap">
@@ -386,7 +386,13 @@
                 maxlength="200"
                 placeholder="leave a thought…"></textarea>
     </div>
-    <button type="button" id="nb-post-btn"></button>
+
+    <!-- Post anonymously — clickable zone over green pill -->
+    <div id="nb-post-zone">
+      <button type="button" id="nb-post-btn"
+              aria-label="Post anonymously"
+              tabindex="0"></button>
+    </div>
 
   </div>
 </div>
@@ -796,7 +802,7 @@
 <!-- Study lobby music -->
 <audio id="study-audio" loop preload="none"></audio>
 
-<!-- ── Intro overlay — shown once after loading, remembered in localStorage ── -->
+<!-- ── How It Works — shown after START, before nickname ── -->
 <div id="intro-overlay" style="display:none">
   <img class="intro-flower intro-fl-tl" src="img/yellow-flowers.png" alt="">
   <img class="intro-flower intro-fl-tr" src="img/flower.png"         alt="">

@@ -35,19 +35,50 @@ document.addEventListener('DOMContentLoaded', () => {
   initFirebaseInteractive().catch(err => console.error('[Checkpoint] Firebase init error —', err.message));
 });
 
-// ── INTRO OVERLAY ─────────────────────────────────────────────
-function maybeShowIntro() {
-  if (localStorage.getItem('checkpoint_intro_v1')) return;
+// ── INTRO / HOW IT WORKS ─────────────────────────────────────
+function showIntroOverlay() {
   const el = document.getElementById('intro-overlay');
-  if (el) el.style.display = 'flex';
+  if (!el) {
+    transitionTo('nickname');
+    return;
+  }
+  el.style.display = 'flex';
+  el.style.opacity = '';
+  el.classList.remove('intro-fading');
+}
+
+function transitionToIntro() {
+  fadeOutLoadingAudio();
+  stopLoadingAnimations();
+
+  const from = document.getElementById('screen-' + currentScreen);
+  if (from) {
+    from.style.transition = 'opacity 0.7s ease';
+    from.style.opacity = '0';
+    setTimeout(() => {
+      from.classList.remove('active');
+      from.style.opacity = '';
+      currentScreen = 'intro';
+      showIntroOverlay();
+    }, 700);
+  } else {
+    currentScreen = 'intro';
+    showIntroOverlay();
+  }
 }
 
 function dismissIntro() {
-  localStorage.setItem('checkpoint_intro_v1', '1');
   const el = document.getElementById('intro-overlay');
-  if (!el) return;
+  if (!el) {
+    transitionTo('nickname');
+    return;
+  }
   el.classList.add('intro-fading');
-  setTimeout(() => { el.style.display = 'none'; el.classList.remove('intro-fading'); }, 520);
+  setTimeout(() => {
+    el.style.display = 'none';
+    el.classList.remove('intro-fading');
+    transitionTo('nickname');
+  }, 520);
 }
 
 /** Start loading sequence once the arrival illustration is ready. */
@@ -104,7 +135,6 @@ function showScreen(id) {
   if (id === 'nickname') prepNicknamePage();
   if (id === 'world') {
     setTimeout(() => { initMapBoy(); }, 80);
-    setTimeout(() => { maybeShowIntro(); }, 400);
   }
 }
 
@@ -113,7 +143,7 @@ function transitionTo(id) {
     fadeOutLoadingAudio();
     stopLoadingAnimations();
     startAmbientAudio();
-  } else if (id === 'nickname' && (currentScreen === 'arrival' || currentScreen === 'loading')) {
+  } else if (id === 'nickname' && (currentScreen === 'arrival' || currentScreen === 'loading' || currentScreen === 'intro')) {
     fadeOutLoadingAudio();
     stopLoadingAnimations();
   }
@@ -784,9 +814,19 @@ function wireEvents() {
     startBtn.addEventListener('click', e => {
       if (startBtn.disabled || !startBtn.classList.contains('ready')) return;
       e.preventDefault();
-      transitionTo('nickname');
+      transitionToIntro();
     });
   }
+
+  document.addEventListener('keydown', e => {
+    if (currentScreen !== 'intro') return;
+    const overlay = document.getElementById('intro-overlay');
+    if (!overlay || overlay.style.display === 'none' || overlay.classList.contains('intro-fading')) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      dismissIntro();
+    }
+  });
 
   const nicknameInput = document.getElementById('nickname-input');
   const nicknameBtn   = document.getElementById('nickname-enter-btn');
@@ -878,6 +918,7 @@ function wireEvents() {
       inp.value = inp.value.slice(0, s) + e.key + inp.value.slice(end);
       inp.selectionStart = inp.selectionEnd = s + 1;
     }
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
   }, true); // capture phase so it runs before anything else
 
   // Prevent clicks outside the textarea from giving focus to other
@@ -888,34 +929,25 @@ function wireEvents() {
     const inp = document.getElementById('nb-note-input');
     if (!inp) return;
     if (e.target === inp) return;
-    if (e.target.closest('#nb-post-btn, #nb-back, .note-delete')) return;
+    if (e.target.closest('#nb-post-btn, #nb-post-zone, #nb-back, .note-delete')) return;
     setTimeout(() => { if (inp) inp.focus(); }, 0);
   }, true);
 
-  // Notice board post button — single delegated listener
-  const nbWrap = document.getElementById('nb-wrap');
-  if (nbWrap && !nbWrap.dataset.nbPostWired) {
-    nbWrap.dataset.nbPostWired = '1';
-    nbWrap.addEventListener('click', (e) => {
-      if (!e.target.closest('#nb-post-btn')) return;
+  // Post anonymously — one click handler on the hit zone (same as Enter)
+  const nbPostZone = document.getElementById('nb-post-zone');
+  if (nbPostZone && !nbPostZone.dataset.nbPostWired) {
+    nbPostZone.dataset.nbPostWired = '1';
+    nbPostZone.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       submitNoticeBoardNote(e);
     });
   }
 
-  // Disable post button when textarea is empty, enable when it has text
-  const nbPost = document.getElementById('nb-post-btn');
   const nbTa = document.getElementById('nb-note-input');
-  if (nbTa && nbPost) {
-    const _nbSync = () => {
-      const empty = nbTa.value.trim() === '';
-      nbPost.classList.toggle('nb-btn-empty', empty);
-      nbPost.disabled = empty;
-      nbPost.setAttribute('aria-disabled', empty ? 'true' : 'false');
-    };
-    nbTa.addEventListener('input', _nbSync);
-    _nbSync(); // run once on load
+  if (nbTa) {
+    nbTa.addEventListener('input', _nbSyncPostBtn);
+    _nbSyncPostBtn();
   }
 
   // Post notice board note with Enter (Shift+Enter for newline)
@@ -1379,6 +1411,15 @@ function _nbFirstEmptyIndex(slots) {
   return slots.findIndex(s => !s || !s.text);
 }
 
+function _nbSyncPostBtn() {
+  const nbPost = document.getElementById('nb-post-btn');
+  const nbTa   = document.getElementById('nb-note-input');
+  if (!nbPost || !nbTa) return;
+  const empty = nbTa.value.trim() === '';
+  nbPost.classList.toggle('nb-btn-empty', empty);
+  nbPost.setAttribute('aria-disabled', empty ? 'true' : 'false');
+}
+
 function _nbClearAllNotes() {
   document.querySelectorAll('#screen-noticeboard .note-text').forEach(el => {
     if (!el.closest('.sticky-note')) el.remove();
@@ -1481,6 +1522,7 @@ function openNoticeBoard() {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-noticeboard')?.classList.add('active');
   currentScreen = 'noticeboard';
+  _nbSyncPostBtn();
   setTimeout(() => buildNoticeBoardPins(), 50);
 }
 
@@ -1539,12 +1581,10 @@ async function submitNoticeBoardNote(e) {
   if (_nbIsPosting) return;
 
   const inp  = document.getElementById('nb-note-input');
-  const btn  = document.getElementById('nb-post-btn');
   const text = inp ? inp.value.trim() : '';
 
   if (!text) { showToast('Write something first ✏️'); return; }
   if (text.length > 200) { showToast('Notes must be 200 characters or less'); return; }
-  if (btn && btn.disabled) return;
 
   _nbIsPosting = true;
 
@@ -1582,6 +1622,8 @@ async function submitNoticeBoardNote(e) {
     setTimeout(() => { _nbIsPosting = false; }, 500);
   }
 }
+
+window.submitNoticeBoardNote = submitNoticeBoardNote;
 
 // ── Walk the avatar to a map % position, then fire onArrival
 function walkToZone(xPct, yPct, onArrival) {
