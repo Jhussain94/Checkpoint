@@ -185,7 +185,7 @@ html, body {
 }
 
 /* ── BOY WALKING ON LOADING SCREEN ──────────────────────────────────────── */
-/* Wrapper moves on X only; each frame handles opacity + synced Y bob.        */
+/* 4s cycle (700/500/700/500 ms holds); opacity-only cuts reduce frame glitch */
 #boy-wrap {
   position: absolute;
   bottom: -3%;
@@ -193,9 +193,9 @@ html, body {
   height: 24%;
   pointer-events: none;
   z-index: 8;
-  will-change: transform;
-  transform: translateX(-110px);
-  animation: boyMarch 8s linear infinite;
+  will-change: transform, bottom;
+  transform: translateX(-110px) translateZ(0);
+  animation: boyMarch 10s linear infinite, boyBob 4s step-end infinite;
 }
 
 .boy-frame {
@@ -205,27 +205,43 @@ html, body {
   height: 100%;
   width: auto;
   opacity: 0;
+  visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
-/* 2.2s cycle — 1(642ms) → 2(458ms) → 3(642ms) → 2(458ms), same 7:5:7:5 ratio */
-#boy-f1 { animation: boyFrame1 2.2s step-end infinite; }
-#boy-f2 { animation: boyFrame2 2.2s step-end infinite; }
-#boy-f3 { animation: boyFrame3 2.2s step-end infinite; }
+#boy-f1 { transform: translateX(2%) translateZ(0); }
+#boy-f2 { transform: translateX(-21%) translateZ(0); }
+#boy-f3 { transform: translateX(-71%) translateZ(0); }
+
+#boy-f1 { animation: boyFrame1 4s step-end infinite; }
+#boy-f2 { animation: boyFrame2 4s step-end infinite; }
+#boy-f3 { animation: boyFrame3 4s step-end infinite; }
 
 @keyframes boyFrame1 {
-  0%      { opacity: 1; transform: translateX(2%) translateY(0); }
-  29.17%  { opacity: 0; transform: translateX(2%) translateY(0); }
+  0%       { opacity: 1; visibility: visible; }
+  26.923%  { opacity: 0; visibility: hidden; }
 }
 @keyframes boyFrame2 {
-  0%      { opacity: 0; transform: translateX(-21%) translateY(-6px); }
-  29.17%  { opacity: 1; transform: translateX(-21%) translateY(-6px); }
-  50%     { opacity: 0; transform: translateX(-21%) translateY(-6px); }
-  79.17%  { opacity: 1; transform: translateX(-21%) translateY(-6px); }
+  0%       { opacity: 0; visibility: hidden; }
+  26.923%  { opacity: 1; visibility: visible; }
+  46.154%  { opacity: 0; visibility: hidden; }
+  73.077%  { opacity: 1; visibility: visible; }
+  100%     { opacity: 0; visibility: hidden; }
 }
 @keyframes boyFrame3 {
-  0%      { opacity: 0; transform: translateX(-71%) translateY(0); }
-  50%     { opacity: 1; transform: translateX(-71%) translateY(0); }
-  79.17%  { opacity: 0; transform: translateX(-71%) translateY(0); }
+  0%       { opacity: 0; visibility: hidden; }
+  46.154%  { opacity: 1; visibility: visible; }
+  73.077%  { opacity: 0; visibility: hidden; }
+}
+
+/* Subtle bob on frame 2 beats (bottom anim — no transform conflict with march) */
+@keyframes boyBob {
+  0%       { bottom: -3%; }
+  26.923%  { bottom: calc(-3% + 5px); }
+  46.154%  { bottom: -3%; }
+  73.077%  { bottom: calc(-3% + 5px); }
+  100%     { bottom: -3%; }
 }
 
 /* Linear cross; loop resets off-screen left/right */
