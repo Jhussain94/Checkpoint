@@ -1526,6 +1526,10 @@ function openNoticeBoard() {
   setTimeout(() => buildNoticeBoardPins(), 50);
 }
 
+function openNoticeBoardFromMap() {
+  walkToZone(43, 52, () => openNoticeBoard());
+}
+
 function closeNoticeBoard() {
   backToMap();
 }
