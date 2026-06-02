@@ -143,6 +143,7 @@ html, body {
   overflow: hidden;
   border-radius: 22px;
   box-shadow: 0 10px 48px rgba(42,26,4,0.30), 0 2px 8px rgba(42,26,4,0.12);
+  container-type: inline-size;
 }
 
 /* Image fills the wrapper exactly — wrapper ratio matches image ratio */
@@ -184,67 +185,53 @@ html, body {
 }
 
 /* ── BOY WALKING ON LOADING SCREEN ──────────────────────────────────────── */
-/* The wrapper clips to show only the character width; each <img> is shifted */
-/* horizontally so its character always appears at the centre of the window. */
-/* This prevents the "sliding backward" caused by the character sitting at   */
-/* different x-positions within each source PNG.                              */
+/* Wrapper moves on X only; each frame handles opacity + synced Y bob.        */
 #boy-wrap {
   position: absolute;
-  bottom: -3%;          /* feet sit at the very bottom edge where the bushes are cut off */
-  left: -110px;
+  bottom: -3%;
+  left: 0;
   height: 24%;
-  /* No width / no overflow:hidden — images extend freely so the full        */
-  /* character (including head) is always visible. The parent #arrival-img-  */
-  /* wrap already clips at the screen edges via its own overflow:hidden.     */
   pointer-events: none;
   z-index: 8;
-  will-change: left;
-  animation: boyMarch 11s linear infinite;
+  will-change: transform;
+  transform: translateX(-110px);
+  animation: boyMarch 8s linear infinite;
 }
 
-/* All frames: same height, pinned to wrapper bottom, auto width */
 .boy-frame {
   position: absolute;
   bottom: 0;
   left: 0;
   height: 100%;
   width: auto;
-  opacity: 0;           /* hidden by default; keyframes reveal each in turn  */
+  opacity: 0;
 }
 
-/* translateX shifts each image so its character is centred in the wrapper.
-   Formula: (0.13 − cx) × 100% where 0.13 = half wrapper/img width ratio.
-   Because translateX% is relative to the element's own width, these values
-   are viewport-independent and stay correct at any screen size.             */
-#boy-f1 { transform: translateX(  2%); }   /* cx 0.11 */
-#boy-f2 { transform: translateX(-21%); }   /* cx 0.34 */
-#boy-f3 { transform: translateX(-71%); }   /* cx 0.84 */
-
-/* Sequence 1(700ms) → 2(500ms) → 3(700ms) → 2(500ms), total 2400ms.       */
-/* step-end = instant cut, no cross-fade.                                    */
-#boy-f1 { animation: boyFrame1 2.4s step-end infinite; }
-#boy-f2 { animation: boyFrame2 2.4s step-end infinite; }
-#boy-f3 { animation: boyFrame3 2.4s step-end infinite; }
+/* 2.2s cycle — 1(642ms) → 2(458ms) → 3(642ms) → 2(458ms), same 7:5:7:5 ratio */
+#boy-f1 { animation: boyFrame1 2.2s step-end infinite; }
+#boy-f2 { animation: boyFrame2 2.2s step-end infinite; }
+#boy-f3 { animation: boyFrame3 2.2s step-end infinite; }
 
 @keyframes boyFrame1 {
-  0%      { opacity: 1; }   /* on 0–29.17% (700ms) */
-  29.17%  { opacity: 0; }
+  0%      { opacity: 1; transform: translateX(2%) translateY(0); }
+  29.17%  { opacity: 0; transform: translateX(2%) translateY(0); }
 }
 @keyframes boyFrame2 {
-  0%      { opacity: 0; }
-  29.17%  { opacity: 1; }   /* on 29.17–50% (500ms) */
-  50%     { opacity: 0; }
-  79.17%  { opacity: 1; }   /* on 79.17–100% (500ms) */
+  0%      { opacity: 0; transform: translateX(-21%) translateY(-6px); }
+  29.17%  { opacity: 1; transform: translateX(-21%) translateY(-6px); }
+  50%     { opacity: 0; transform: translateX(-21%) translateY(-6px); }
+  79.17%  { opacity: 1; transform: translateX(-21%) translateY(-6px); }
 }
 @keyframes boyFrame3 {
-  0%      { opacity: 0; }
-  50%     { opacity: 1; }   /* on 50–79.17% (700ms) */
-  79.17%  { opacity: 0; }
+  0%      { opacity: 0; transform: translateX(-71%) translateY(0); }
+  50%     { opacity: 1; transform: translateX(-71%) translateY(0); }
+  79.17%  { opacity: 0; transform: translateX(-71%) translateY(0); }
 }
 
+/* Linear cross; loop resets off-screen left/right */
 @keyframes boyMarch {
-  0%   { left: -110px; }
-  100% { left: calc(100% + 80px); }
+  0%   { transform: translateX(-110px); }
+  100% { transform: translateX(calc(100cqw + 80px)); }
 }
 
 /* ── FALLING LEAVES FROM LEFT TREE (arrival screen only) ─────────────────── */
