@@ -63,7 +63,7 @@
 /* ── Invisible hit-target over illustrated "← back to map" ── */
 #yd-back {
   position: absolute;
-  top: 1.5%;
+  top: calc(1.5% + 22px);
   left: 0.5%;
   width: 12%;
   height: 6%;
@@ -72,6 +72,13 @@
   border: none;
   cursor: pointer;
   padding: 0;
+}
+
+#yd-back:hover,
+#yd-back:focus,
+#yd-back:active {
+  background: transparent;
+  outline: none;
 }
 
 .yd-top-right {
@@ -575,8 +582,8 @@
   font-family: 'UglyDave', sans-serif;
   font-size: clamp(10px, 1vw, 14px);
   color: #fdf8ec;
-  background: #5a6b44;
-  border: 2px solid #4a5a36;
+  background: #6f8258;
+  border: 2px solid #5d7049;
   border-radius: 18px 14px 16px 12px;
   padding: 6px 14px;
   cursor: pointer;

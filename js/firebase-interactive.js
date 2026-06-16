@@ -154,18 +154,30 @@ async function saveCampusCameraUpload(imageUrl, caption) {
   }
 }
 
-/** Save anonymous notice board note to Firestore. */
+/** Save anonymous notice board note to Firestore. Returns document id. */
 async function saveNoticeBoardNote(text) {
   if (!_firebaseReady || !_firestore) {
     throw new Error('Firebase not ready — check js/firebase-config.js');
   }
 
-  await _firestore.collection(NOTICE_BOARD_COLLECTION).add({
+  const ref = await _firestore.collection(NOTICE_BOARD_COLLECTION).add({
     text,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
   });
 
   console.log('[Checkpoint] Notice Board: Firestore save success →', NOTICE_BOARD_COLLECTION, text.slice(0, 40));
+  return ref.id;
+}
+
+/** Delete a notice board note from Firestore by document id. */
+async function deleteNoticeBoardNote(docId) {
+  if (!docId) return;
+  if (!_firebaseReady || !_firestore) {
+    throw new Error('Firebase not ready — check js/firebase-config.js');
+  }
+
+  await _firestore.collection(NOTICE_BOARD_COLLECTION).doc(docId).delete();
+  console.log('[Checkpoint] Notice Board: Firestore delete success →', NOTICE_BOARD_COLLECTION, docId);
 }
 
 /** Validate image file type and size before upload. */

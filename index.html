@@ -33,7 +33,7 @@
     <button id="start-btn"
             aria-label="Enter the world"
             disabled
-            onclick="transitionTo('world')">
+            onclick="transitionToIntro()">
     </button>
 
     <!-- Boy walk — wrapper clips; each img shifted so character stays centred -->
@@ -61,7 +61,7 @@
 
 
 <!-- ──────────────────────────────────────────────────────────────
-     SCREEN 2 — NICKNAME (after START, before map)
+     SCREEN 2 — NICKNAME (after How It Works, before map)
 ────────────────────────────────────────────────────────────────── -->
 <div class="screen" id="screen-nickname">
   <div id="nickname-img-wrap">
@@ -127,7 +127,7 @@
     <!-- Green notice board — centre of map → show student notes -->
     <button class="map-zone-btn mzb-board" id="zone-board-btn"
             style="left:43%;top:52%"
-            onclick="openNoticeBoard()"
+            onclick="openNoticeBoardFromMap()"
             aria-label="Open Notice Board">
       <span class="mzb-dot"></span>
       <span class="mzb-label">📋 Notice Board</span>
@@ -370,23 +370,29 @@
     <img id="nb-bg" src="img/Notice%20Board/Notice%20Board.png" alt="Notice Board"/>
 
     <!-- Back to map -->
-    <button id="nb-back" onclick="closeNoticeBoard()" aria-label="Back to map"></button>
+    <button type="button" id="nb-back" onclick="backToMap()" aria-label="Back to map"></button>
 
-    <!-- Text overlaid on the 6 illustrated sticky notes -->
-    <div class="nb-slot" id="nb-slot-0"></div>
-    <div class="nb-slot" id="nb-slot-1"></div>
-    <div class="nb-slot" id="nb-slot-2"></div>
-    <div class="nb-slot" id="nb-slot-3"></div>
-    <div class="nb-slot" id="nb-slot-4"></div>
-    <div class="nb-slot" id="nb-slot-5"></div>
+    <!-- Sticky note containers — text renders inside each only -->
+    <div class="sticky-note" id="nb-slot-0"></div>
+    <div class="sticky-note" id="nb-slot-1"></div>
+    <div class="sticky-note" id="nb-slot-2"></div>
+    <div class="sticky-note" id="nb-slot-3"></div>
+    <div class="sticky-note" id="nb-slot-4"></div>
+    <div class="sticky-note" id="nb-slot-5"></div>
 
     <!-- Clip wrapper — hard-clips textarea to the illustrated white box -->
     <div id="nb-input-clip">
       <textarea id="nb-note-input"
-                maxlength="250"
-                placeholder="Share a thought..."></textarea>
+                maxlength="200"
+                placeholder="leave a thought…"></textarea>
     </div>
-    <button id="nb-post-btn" onclick="submitNoticeBoardNote()"></button>
+
+    <!-- Post anonymously — clickable zone over green pill -->
+    <div id="nb-post-zone">
+      <button type="button" id="nb-post-btn"
+              aria-label="Post anonymously"
+              tabindex="0"></button>
+    </div>
 
   </div>
 </div>
@@ -508,14 +514,14 @@
 
     <!-- Transparent hit-target over the illustrated green "start" button -->
     <button id="study-start-btn" onclick="openStudyTimerModal()" aria-label="Start timer"></button>
+    <button id="study-timer-stop" onclick="stopStudyTimer()" aria-label="Stop timer" hidden>■ Stop</button>
 
     <!-- Online users on the laptop screen -->
     <div id="study-laptop-online" aria-live="polite"></div>
 
-    <!-- Countdown overlay — shown when timer is running -->
+    <!-- Countdown — inside the left beige study timer panel -->
     <div id="study-timer-display">
       <div id="study-timer-count">00:00</div>
-      <button id="study-timer-stop" onclick="stopStudyTimer()" aria-label="Stop timer">■ Stop</button>
     </div>
 
     <!-- Music selector — below the timer card -->
@@ -796,7 +802,7 @@
 <!-- Study lobby music -->
 <audio id="study-audio" loop preload="none"></audio>
 
-<!-- ── Intro overlay — shown once after loading, remembered in localStorage ── -->
+<!-- ── How It Works — shown after START, before nickname ── -->
 <div id="intro-overlay" style="display:none">
   <img class="intro-flower intro-fl-tl" src="img/yellow-flowers.png" alt="">
   <img class="intro-flower intro-fl-tr" src="img/flower.png"         alt="">

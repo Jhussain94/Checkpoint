@@ -35,19 +35,50 @@ document.addEventListener('DOMContentLoaded', () => {
   initFirebaseInteractive().catch(err => console.error('[Checkpoint] Firebase init error —', err.message));
 });
 
-// ── INTRO OVERLAY ─────────────────────────────────────────────
-function maybeShowIntro() {
-  if (localStorage.getItem('checkpoint_intro_v1')) return;
+// ── INTRO / HOW IT WORKS ─────────────────────────────────────
+function showIntroOverlay() {
   const el = document.getElementById('intro-overlay');
-  if (el) el.style.display = 'flex';
+  if (!el) {
+    transitionTo('nickname');
+    return;
+  }
+  el.style.display = 'flex';
+  el.style.opacity = '';
+  el.classList.remove('intro-fading');
+}
+
+function transitionToIntro() {
+  fadeOutLoadingAudio();
+  stopLoadingAnimations();
+
+  const from = document.getElementById('screen-' + currentScreen);
+  if (from) {
+    from.style.transition = 'opacity 0.7s ease';
+    from.style.opacity = '0';
+    setTimeout(() => {
+      from.classList.remove('active');
+      from.style.opacity = '';
+      currentScreen = 'intro';
+      showIntroOverlay();
+    }, 700);
+  } else {
+    currentScreen = 'intro';
+    showIntroOverlay();
+  }
 }
 
 function dismissIntro() {
-  localStorage.setItem('checkpoint_intro_v1', '1');
   const el = document.getElementById('intro-overlay');
-  if (!el) return;
+  if (!el) {
+    transitionTo('nickname');
+    return;
+  }
   el.classList.add('intro-fading');
-  setTimeout(() => { el.style.display = 'none'; el.classList.remove('intro-fading'); }, 520);
+  setTimeout(() => {
+    el.style.display = 'none';
+    el.classList.remove('intro-fading');
+    transitionTo('nickname');
+  }, 520);
 }
 
 /** Start loading sequence once the arrival illustration is ready. */
@@ -104,7 +135,6 @@ function showScreen(id) {
   if (id === 'nickname') prepNicknamePage();
   if (id === 'world') {
     setTimeout(() => { initMapBoy(); }, 80);
-    setTimeout(() => { maybeShowIntro(); }, 400);
   }
 }
 
@@ -113,7 +143,7 @@ function transitionTo(id) {
     fadeOutLoadingAudio();
     stopLoadingAnimations();
     startAmbientAudio();
-  } else if (id === 'nickname' && (currentScreen === 'arrival' || currentScreen === 'loading')) {
+  } else if (id === 'nickname' && (currentScreen === 'arrival' || currentScreen === 'loading' || currentScreen === 'intro')) {
     fadeOutLoadingAudio();
     stopLoadingAnimations();
   }
@@ -784,9 +814,19 @@ function wireEvents() {
     startBtn.addEventListener('click', e => {
       if (startBtn.disabled || !startBtn.classList.contains('ready')) return;
       e.preventDefault();
-      transitionTo('nickname');
+      transitionToIntro();
     });
   }
+
+  document.addEventListener('keydown', e => {
+    if (currentScreen !== 'intro') return;
+    const overlay = document.getElementById('intro-overlay');
+    if (!overlay || overlay.style.display === 'none' || overlay.classList.contains('intro-fading')) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      dismissIntro();
+    }
+  });
 
   const nicknameInput = document.getElementById('nickname-input');
   const nicknameBtn   = document.getElementById('nickname-enter-btn');
@@ -826,7 +866,7 @@ function wireEvents() {
       else if (meadowOpen)  closeMeadow();
       else if (document.getElementById('panel-canvas').classList.contains('open'))       closeCanvasRoom();
       else if (document.getElementById('panel-library').classList.contains('open'))      closeLibrary();
-      else if (document.getElementById('screen-noticeboard').classList.contains('active')) closeNoticeBoard();
+      else if (document.getElementById('screen-noticeboard').classList.contains('active')) { backToMap(); return; }
       else if (document.getElementById('screen-camera').classList.contains('active'))    backFromCamera();
     }
   });
@@ -840,13 +880,6 @@ function wireEvents() {
   });
 
   buildSparkles();
-
-  // Notice board back button — mousedown fires before focusin so nothing can block it
-  const nbBack = document.getElementById('nb-back');
-  if (nbBack) {
-    nbBack.addEventListener('mousedown', e => { e.preventDefault(); closeNoticeBoard(); });
-    nbBack.addEventListener('touchend',  e => { e.preventDefault(); closeNoticeBoard(); });
-  }
 
   // ── Notice board keyboard guard ───────────────────────────────
   // When the notice board screen is active, ALL keyboard input is
@@ -885,6 +918,7 @@ function wireEvents() {
       inp.value = inp.value.slice(0, s) + e.key + inp.value.slice(end);
       inp.selectionStart = inp.selectionEnd = s + 1;
     }
+    inp.dispatchEvent(new Event('input', { bubbles: true }));
   }, true); // capture phase so it runs before anything else
 
   // Prevent clicks outside the textarea from giving focus to other
@@ -892,30 +926,28 @@ function wireEvents() {
   document.addEventListener('focusin', e => {
     const screen = document.getElementById('screen-noticeboard');
     if (!screen || !screen.classList.contains('active')) return;
-    const inp  = document.getElementById('nb-note-input');
-    const post = document.getElementById('nb-post-btn');
-    const back = document.getElementById('nb-back');
-    if (e.target !== inp && e.target !== post && e.target !== back) {
-      // Redirect focus to textarea without preventing default
-      // (preventing default here can block button clicks)
-      setTimeout(() => { if (inp) inp.focus(); }, 0);
-    }
+    const inp = document.getElementById('nb-note-input');
+    if (!inp) return;
+    if (e.target === inp) return;
+    if (e.target.closest('#nb-post-btn, #nb-post-zone, #nb-back, .note-delete')) return;
+    setTimeout(() => { if (inp) inp.focus(); }, 0);
   }, true);
 
-  // Notice board post button — wired in JS so it always fires
-  const nbPost = document.getElementById('nb-post-btn');
-  if (nbPost) nbPost.addEventListener('click', () => submitNoticeBoardNote());
+  // Post anonymously — one click handler on the hit zone (same as Enter)
+  const nbPostZone = document.getElementById('nb-post-zone');
+  if (nbPostZone && !nbPostZone.dataset.nbPostWired) {
+    nbPostZone.dataset.nbPostWired = '1';
+    nbPostZone.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      submitNoticeBoardNote(e);
+    });
+  }
 
-  // Disable post button when textarea is empty, enable when it has text
   const nbTa = document.getElementById('nb-note-input');
-  if (nbTa && nbPost) {
-    const _nbSync = () => {
-      const empty = nbTa.value.trim() === '';
-      nbPost.classList.toggle('nb-btn-empty', empty);
-      nbPost.setAttribute('aria-disabled', empty ? 'true' : 'false');
-    };
-    nbTa.addEventListener('input', _nbSync);
-    _nbSync(); // run once on load
+  if (nbTa) {
+    nbTa.addEventListener('input', _nbSyncPostBtn);
+    _nbSyncPostBtn();
   }
 
   // Post notice board note with Enter (Shift+Enter for newline)
@@ -924,7 +956,7 @@ function wireEvents() {
     nbInput.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        submitNoticeBoardNote();
+        submitNoticeBoardNote(e);
       }
     });
   }
@@ -1326,127 +1358,276 @@ async function submitSelfie() {
 // ══════════════════════════════════════════════════════════════════
 
 // ── NOTICE BOARD ──────────────────────────────────────────────
-// Round-robin slot index — fills top-left → bottom-right, then wraps
-let nbNextSlot = 0;
-
-// The 6 illustrated sticky note slot IDs in display order
+const NB_STORAGE_KEY = 'checkpointNoticeBoardSlots';
+const NB_DELETED_IDS_KEY = 'checkpointNoticeBoardDeletedIds';
 const NB_SLOTS = ['nb-slot-0','nb-slot-1','nb-slot-2','nb-slot-3','nb-slot-4','nb-slot-5'];
+let _nbIsPosting = false;
+
+function _nbLoadDeletedIds() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(NB_DELETED_IDS_KEY) || '[]');
+    return new Set(Array.isArray(raw) ? raw.filter(Boolean) : []);
+  } catch (_) { /* ignore */ }
+  return new Set();
+}
+
+function _nbMarkDeleted(firebaseId) {
+  if (!firebaseId) return;
+  const set = _nbLoadDeletedIds();
+  set.add(firebaseId);
+  localStorage.setItem(NB_DELETED_IDS_KEY, JSON.stringify([...set]));
+}
+
+function _nbCompactSlots(slots) {
+  const filled = slots.filter(s => s && s.text);
+  while (filled.length < 6) filled.push(null);
+  return filled.slice(0, 6);
+}
+
+function _nbLoadSlots() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(NB_STORAGE_KEY) || 'null');
+    if (Array.isArray(raw) && raw.length === 6) {
+      return raw.map(entry => _nbNormalizeEntry(entry));
+    }
+  } catch (_) { /* ignore */ }
+  return [null, null, null, null, null, null];
+}
+
+function _nbNormalizeEntry(entry) {
+  if (!entry) return null;
+  const text = String(entry.text != null ? entry.text : entry).trim();
+  if (!text) return null;
+  const out = { text, ts: entry.ts || Date.now() };
+  if (entry.firebaseId) out.firebaseId = entry.firebaseId;
+  return out;
+}
+
+function _nbSaveSlots(slots) {
+  localStorage.setItem(NB_STORAGE_KEY, JSON.stringify(slots));
+}
+
+function _nbFirstEmptyIndex(slots) {
+  return slots.findIndex(s => !s || !s.text);
+}
+
+function _nbSyncPostBtn() {
+  const nbPost = document.getElementById('nb-post-btn');
+  const nbTa   = document.getElementById('nb-note-input');
+  if (!nbPost || !nbTa) return;
+  const empty = nbTa.value.trim() === '';
+  nbPost.classList.toggle('nb-btn-empty', empty);
+  nbPost.setAttribute('aria-disabled', empty ? 'true' : 'false');
+}
+
+function _nbClearAllNotes() {
+  document.querySelectorAll('#screen-noticeboard .note-text').forEach(el => {
+    if (!el.closest('.sticky-note')) el.remove();
+  });
+  document.querySelectorAll('#screen-noticeboard .nb-slot-text').forEach(el => el.remove());
+  document.querySelectorAll('#nb-wrap > .note-text, #nb-wrap > .nb-slot-text').forEach(el => el.remove());
+  document.querySelectorAll('#nb-wrap .sticky-note').forEach(el => { el.innerHTML = ''; });
+}
+
+function _nbMergeFirebase(slots) {
+  if (typeof getNoticeBoardNotes !== 'function') return _nbCompactSlots(slots);
+
+  const deleted = _nbLoadDeletedIds();
+  const remote = getNoticeBoardNotes().filter(n => {
+    if (!n || !String(n.text || '').trim()) return false;
+    return !deleted.has(n.id);
+  });
+  if (!remote.length) return _nbCompactSlots(slots);
+
+  const merged = _nbCompactSlots(slots);
+  const usedIds = new Set(
+    merged.filter(s => s && s.firebaseId).map(s => s.firebaseId)
+  );
+  const usedTexts = new Set(
+    merged.filter(s => s && s.text).map(s => s.text)
+  );
+
+  const ordered = [...remote].reverse();
+  let ri = 0;
+  for (let i = 0; i < 6 && ri < ordered.length; i++) {
+    if (!merged[i] || !merged[i].text) {
+      while (ri < ordered.length) {
+        const note = ordered[ri++];
+        if (!note || usedIds.has(note.id) || deleted.has(note.id)) continue;
+        const remoteText = String(note.text || '').trim();
+        if (!remoteText || usedTexts.has(remoteText)) continue;
+        merged[i] = _nbNormalizeEntry({
+          text: remoteText,
+          ts: Date.now(),
+          firebaseId: note.id,
+        });
+        usedIds.add(note.id);
+        usedTexts.add(remoteText);
+        break;
+      }
+    }
+  }
+  return merged;
+}
+
+function _nbFitSlotText(stickyEl) {
+  const el = stickyEl?.querySelector('.note-text');
+  if (!el) return;
+
+  let fs = 26;
+  const minFs = 14;
+  el.style.fontSize = '';
+
+  const computed = parseFloat(window.getComputedStyle(el).fontSize) || 18;
+  fs = Math.round(computed);
+
+  const maxH = stickyEl.clientHeight * 0.85;
+  let guard = 0;
+  while (guard++ < 18 && fs > minFs && el.scrollHeight > maxH) {
+    fs -= 1;
+    el.style.fontSize = fs + 'px';
+  }
+}
+
+function _nbRenderSlot(stickyEl, note, slotIndex) {
+  if (!stickyEl || !stickyEl.classList.contains('sticky-note')) return;
+
+  const text = note && note.text ? String(note.text).trim() : '';
+  stickyEl.innerHTML = '';
+  if (!text) return;
+
+  const textEl = document.createElement('div');
+  textEl.className = 'note-text';
+  textEl.textContent = text;
+  stickyEl.appendChild(textEl);
+
+  const delBtn = document.createElement('button');
+  delBtn.type = 'button';
+  delBtn.className = 'note-delete';
+  delBtn.setAttribute('aria-label', 'Delete note');
+  delBtn.textContent = '×';
+  delBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    deleteNoticeBoardNoteAtSlot(slotIndex);
+  });
+  stickyEl.appendChild(delBtn);
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => _nbFitSlotText(stickyEl));
+  });
+}
 
 function openNoticeBoard() {
-  buildNoticeBoardPins();
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-noticeboard').classList.add('active');
+  document.getElementById('screen-noticeboard')?.classList.add('active');
+  currentScreen = 'noticeboard';
+  _nbSyncPostBtn();
+  setTimeout(() => buildNoticeBoardPins(), 50);
+}
+
+function openNoticeBoardFromMap() {
+  walkToZone(43, 52, () => openNoticeBoard());
 }
 
 function closeNoticeBoard() {
-  if (activeDrop) closeDrop();
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById('screen-world').classList.add('active');
-  currentScreen = 'world';
-  Object.keys(mapKeys).forEach(k => { delete mapKeys[k]; });
-  if (document.activeElement && document.activeElement !== document.body) {
-    document.activeElement.blur();
-  }
-  setTimeout(() => initMapBoy(), 80);
-}
-
-function _nbPreview(drop) {
-  // Returns a short readable label for any drop type
-  if (drop.type === 'song' || drop.type === 'playlist') return '🎵 ' + (drop.caption || 'a music drop');
-  if (drop.type === 'tiktok')  return '🎵 ' + (drop.caption || 'TikTok');
-  if (drop.type === 'video')   return '🎬 ' + (drop.caption || 'a video');
-  if (drop.type === 'photo')   return '📸 ' + (drop.caption || 'a photo');
-  if (drop.type === 'text') {
-    try {
-      return '🔗 ' + new URL(drop.content).hostname.replace('www.', '');
-    } catch {
-      const t = drop.content || '';
-      return t.length > 80 ? t.slice(0, 78) + '…' : t;
-    }
-  }
-  return drop.caption || drop.content || '';
+  backToMap();
 }
 
 function buildNoticeBoardPins() {
-  // Load existing notes into the slots in order (oldest → newest fills round-robin)
-  const combined = [];
+  const wrap = document.getElementById('nb-wrap');
+  if (!wrap) return;
 
-  if (typeof getNoticeBoardNotes === 'function') {
-    getNoticeBoardNotes().forEach(n => {
-      if (n.text) combined.push({ text: n.text, ts: n.createdAt ? new Date(n.createdAt).getTime() : 0 });
-    });
-  }
-
-  getDrops().forEach(d => {
-    const preview = _nbPreview(d);
-    if (preview) combined.push({ text: preview, ts: d.timestamp ? new Date(d.timestamp).getTime() : 0 });
-  });
-
-  // Sort oldest first so they fill slots in arrival order
-  combined.sort((a, b) => a.ts - b.ts);
-  const items = combined.slice(-6); // keep last 6
-
+  _nbClearAllNotes();
+  const slots = _nbCompactSlots(_nbMergeFirebase(_nbLoadSlots()));
+  _nbSaveSlots(slots);
   NB_SLOTS.forEach((id, i) => {
-    const slot = document.getElementById(id);
-    if (!slot) return;
-    if (!items[i]) { slot.innerHTML = ''; return; }
-    const safe = items[i].text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    slot.innerHTML = `<div class="nb-slot-text">${safe}</div>`;
+    _nbRenderSlot(document.getElementById(id), slots[i], i);
   });
-
-  // Set nextNoteIndex to the next empty slot (or oldest if all full)
-  nbNextSlot = Math.min(items.length, 5);
-  if (items.length >= 6) nbNextSlot = 0; // wrap — will replace slot 0 next
 }
 
-async function submitNoticeBoardNote() {
-  const inp  = document.getElementById('nb-note-input');
-  const btn  = document.getElementById('nb-post-btn');
-  const text = inp ? inp.value.trim() : '';
+async function deleteNoticeBoardNoteAtSlot(slotIndex) {
+  if (slotIndex < 0 || slotIndex > 5) return;
 
-  if (!text) { showToast('Please write a note first ✏️'); return; }
-  if (btn && btn.classList.contains('nb-btn-empty')) return;
+  const slots = _nbLoadSlots();
+  const note = slots[slotIndex];
+  if (!note || !note.text) return;
 
-  // ── Place text on the current slot immediately (round-robin) ──
-  const slotId = NB_SLOTS[nbNextSlot];
-  const slot   = document.getElementById(slotId);
-  if (slot) {
-    const safe = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    slot.innerHTML = `<div class="nb-slot-text">${safe}</div>`;
+  let firebaseId = note.firebaseId;
+  if (!firebaseId && typeof getNoticeBoardNotes === 'function') {
+    const match = getNoticeBoardNotes().find(n => n && n.text === note.text);
+    if (match) firebaseId = match.id;
   }
 
-  // Advance to next slot, wrapping back to 0 after slot 5
-  nbNextSlot = (nbNextSlot + 1) % NB_SLOTS.length;
-
-  // Clear the text box
-  if (inp) {
-    inp.value = '';
-    inp.dispatchEvent(new Event('input')); // re-sync disable state
-  }
-
-  // Persist to backend (non-blocking — UI already updated above)
-  try {
-    if (typeof saveNoticeBoardNote === 'function') {
-      await saveNoticeBoardNote(text);
-    } else {
-      await saveUserDrop({
-        id:        'nb' + Date.now(),
-        type:      'text',
-        content:   text,
-        caption:   null,
-        mood:      'peaceful',
-        area:      'corner',
-        timestamp: new Date().toISOString(),
-        username:  localStorage.getItem(USERNAME_KEY) || 'anonymous student',
-        position:  { x: 56 + Math.random() * 40, y: 56 + Math.random() * 28 },
+  if (firebaseId) {
+    _nbMarkDeleted(firebaseId);
+    if (typeof deleteNoticeBoardNote === 'function') {
+      deleteNoticeBoardNote(firebaseId).catch(err => {
+        console.warn('[Checkpoint] Notice board Firebase delete failed:', err.message);
       });
     }
-  } catch (err) {
-    console.warn('[Checkpoint] Notice board save failed:', err.message);
   }
 
-  showToast('📌 Note posted!');
+  slots[slotIndex] = null;
+  const compacted = _nbCompactSlots(slots);
+  _nbSaveSlots(compacted);
+
+  _nbClearAllNotes();
+  compacted.forEach((entry, i) => {
+    _nbRenderSlot(document.getElementById(NB_SLOTS[i]), entry, i);
+  });
+
+  showToast('Note removed');
 }
+
+async function submitNoticeBoardNote(e) {
+  if (e && e.preventDefault) e.preventDefault();
+  if (_nbIsPosting) return;
+
+  const inp  = document.getElementById('nb-note-input');
+  const text = inp ? inp.value.trim() : '';
+
+  if (!text) { showToast('Write something first ✏️'); return; }
+  if (text.length > 200) { showToast('Notes must be 200 characters or less'); return; }
+
+  _nbIsPosting = true;
+
+  try {
+    const slots = _nbCompactSlots(_nbLoadSlots());
+    let idx = _nbFirstEmptyIndex(slots);
+    if (idx < 0) idx = 0;
+
+    slots[idx] = { text, ts: Date.now() };
+    _nbSaveSlots(slots);
+
+    _nbRenderSlot(document.getElementById(NB_SLOTS[idx]), slots[idx], idx);
+
+    if (inp) {
+      inp.value = '';
+      inp.dispatchEvent(new Event('input'));
+    }
+
+    showToast('📌 Note posted!');
+
+    if (typeof saveNoticeBoardNote === 'function') {
+      saveNoticeBoardNote(text).then(firebaseId => {
+        if (!firebaseId) return;
+        const updated = _nbCompactSlots(_nbLoadSlots());
+        const slot = updated.find(s => s && s.text === text && !s.firebaseId);
+        if (slot) {
+          slot.firebaseId = firebaseId;
+          _nbSaveSlots(updated);
+        }
+      }).catch(err => {
+        console.warn('[Checkpoint] Notice board Firebase save failed:', err.message);
+      });
+    }
+  } finally {
+    setTimeout(() => { _nbIsPosting = false; }, 500);
+  }
+}
+
+window.submitNoticeBoardNote = submitNoticeBoardNote;
 
 // ── Walk the avatar to a map % position, then fire onArrival
 function walkToZone(xPct, yPct, onArrival) {
@@ -1478,6 +1659,8 @@ function backToMap() {
   if (typeof YourDrops !== 'undefined' && typeof YourDrops.closePage === 'function') {
     YourDrops.closePage();
   }
+
+  if (activeDrop) closeDrop();
 
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
 
@@ -1998,11 +2181,11 @@ function confirmStudyTimer() {
   cancelStudyTimerModal();
   studyTimerSeconds = Math.round(mins * 60);
 
-  // Swap start button → countdown display
-  document.getElementById('study-start-btn').style.display   = 'none';
+  // Swap start button → countdown + stop overlay
+  document.getElementById('study-start-btn').style.display = 'none';
   document.getElementById('study-timer-display').style.display = 'flex';
-  const online = document.getElementById('study-laptop-online');
-  if (online) online.style.display = 'none';
+  const stopBtn = document.getElementById('study-timer-stop');
+  if (stopBtn) stopBtn.hidden = false;
   _tickStudyTimer();
   if (studyTimerInterval) clearInterval(studyTimerInterval);
   studyTimerInterval = setInterval(_tickStudyTimer, 1000);
@@ -2051,10 +2234,10 @@ function stopStudyTimer() {
 }
 function _resetStudyTimer() {
   studyTimerSeconds = 0;
-  document.getElementById('study-start-btn').style.display    = '';
+  document.getElementById('study-start-btn').style.display = '';
   document.getElementById('study-timer-display').style.display = 'none';
-  const online = document.getElementById('study-laptop-online');
-  if (online) online.style.display = '';
+  const stopBtn = document.getElementById('study-timer-stop');
+  if (stopBtn) stopBtn.hidden = true;
   const el = document.getElementById('study-timer-count');
   if (el) el.textContent = '00:00';
 }

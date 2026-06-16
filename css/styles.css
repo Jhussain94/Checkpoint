@@ -6,6 +6,14 @@
   font-display: swap;
 }
 
+@font-face {
+  font-family: 'UglyDaveRegular';
+  src: url('../assets/fonts/UglyDaveRegular.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
@@ -41,7 +49,7 @@ html, body {
 }
 
 /* ─── SCREEN SYSTEM ─────────────────────────────────────────────────────── */
-/* ─── INTRO OVERLAY — shown once after loading, never again ─────────────── */
+/* ─── HOW IT WORKS — full-screen step after START, before nickname ───────── */
 #intro-overlay {
   position: fixed; inset: 0; z-index: 8000;
   background: #2c471c;
@@ -135,6 +143,7 @@ html, body {
   overflow: hidden;
   border-radius: 22px;
   box-shadow: 0 10px 48px rgba(42,26,4,0.30), 0 2px 8px rgba(42,26,4,0.12);
+  container-type: inline-size;
 }
 
 /* Image fills the wrapper exactly — wrapper ratio matches image ratio */
@@ -176,67 +185,69 @@ html, body {
 }
 
 /* ── BOY WALKING ON LOADING SCREEN ──────────────────────────────────────── */
-/* The wrapper clips to show only the character width; each <img> is shifted */
-/* horizontally so its character always appears at the centre of the window. */
-/* This prevents the "sliding backward" caused by the character sitting at   */
-/* different x-positions within each source PNG.                              */
+/* 4s cycle (700/500/700/500 ms holds); opacity-only cuts reduce frame glitch */
 #boy-wrap {
   position: absolute;
-  bottom: -3%;          /* feet sit at the very bottom edge where the bushes are cut off */
-  left: -110px;
+  bottom: -3%;
+  left: 0;
   height: 24%;
-  /* No width / no overflow:hidden — images extend freely so the full        */
-  /* character (including head) is always visible. The parent #arrival-img-  */
-  /* wrap already clips at the screen edges via its own overflow:hidden.     */
   pointer-events: none;
   z-index: 8;
-  will-change: left;
-  animation: boyMarch 11s linear infinite;
+  will-change: transform, bottom;
+  transform: translateX(-110px) translateZ(0);
+  animation: boyMarch 10s linear infinite, boyBob 4s step-end infinite;
 }
 
-/* All frames: same height, pinned to wrapper bottom, auto width */
 .boy-frame {
   position: absolute;
   bottom: 0;
   left: 0;
   height: 100%;
   width: auto;
-  opacity: 0;           /* hidden by default; keyframes reveal each in turn  */
+  opacity: 0;
+  visibility: hidden;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
-/* translateX shifts each image so its character is centred in the wrapper.
-   Formula: (0.13 − cx) × 100% where 0.13 = half wrapper/img width ratio.
-   Because translateX% is relative to the element's own width, these values
-   are viewport-independent and stay correct at any screen size.             */
-#boy-f1 { transform: translateX(  2%); }   /* cx 0.11 */
-#boy-f2 { transform: translateX(-21%); }   /* cx 0.34 */
-#boy-f3 { transform: translateX(-71%); }   /* cx 0.84 */
+#boy-f1 { transform: translateX(2%) translateZ(0); }
+#boy-f2 { transform: translateX(-21%) translateZ(0); }
+#boy-f3 { transform: translateX(-71%) translateZ(0); }
 
-/* Sequence 1(700ms) → 2(500ms) → 3(700ms) → 2(500ms), total 2400ms.       */
-/* step-end = instant cut, no cross-fade.                                    */
-#boy-f1 { animation: boyFrame1 2.4s step-end infinite; }
-#boy-f2 { animation: boyFrame2 2.4s step-end infinite; }
-#boy-f3 { animation: boyFrame3 2.4s step-end infinite; }
+#boy-f1 { animation: boyFrame1 4s step-end infinite; }
+#boy-f2 { animation: boyFrame2 4s step-end infinite; }
+#boy-f3 { animation: boyFrame3 4s step-end infinite; }
 
 @keyframes boyFrame1 {
-  0%      { opacity: 1; }   /* on 0–29.17% (700ms) */
-  29.17%  { opacity: 0; }
+  0%       { opacity: 1; visibility: visible; }
+  26.923%  { opacity: 0; visibility: hidden; }
 }
 @keyframes boyFrame2 {
-  0%      { opacity: 0; }
-  29.17%  { opacity: 1; }   /* on 29.17–50% (500ms) */
-  50%     { opacity: 0; }
-  79.17%  { opacity: 1; }   /* on 79.17–100% (500ms) */
+  0%       { opacity: 0; visibility: hidden; }
+  26.923%  { opacity: 1; visibility: visible; }
+  46.154%  { opacity: 0; visibility: hidden; }
+  73.077%  { opacity: 1; visibility: visible; }
+  100%     { opacity: 0; visibility: hidden; }
 }
 @keyframes boyFrame3 {
-  0%      { opacity: 0; }
-  50%     { opacity: 1; }   /* on 50–79.17% (700ms) */
-  79.17%  { opacity: 0; }
+  0%       { opacity: 0; visibility: hidden; }
+  46.154%  { opacity: 1; visibility: visible; }
+  73.077%  { opacity: 0; visibility: hidden; }
 }
 
+/* Subtle bob on frame 2 beats (bottom anim — no transform conflict with march) */
+@keyframes boyBob {
+  0%       { bottom: -3%; }
+  26.923%  { bottom: calc(-3% + 5px); }
+  46.154%  { bottom: -3%; }
+  73.077%  { bottom: calc(-3% + 5px); }
+  100%     { bottom: -3%; }
+}
+
+/* Linear cross; loop resets off-screen left/right */
 @keyframes boyMarch {
-  0%   { left: -110px; }
-  100% { left: calc(100% + 80px); }
+  0%   { transform: translateX(-110px); }
+  100% { transform: translateX(calc(100cqw + 80px)); }
 }
 
 /* ── FALLING LEAVES FROM LEFT TREE (arrival screen only) ─────────────────── */
@@ -949,7 +960,8 @@ html, body {
 /* Back to map hit-target — over the "< back to map" text */
 #study-back {
   position: absolute;
-  top: 1.5%; left: 0.5%;
+  top: calc(1.5% + 22px);
+  left: 0.5%;
   width: 16%; height: 6%;
   z-index: 20;
   background: transparent; border: none; cursor: pointer;
@@ -957,7 +969,7 @@ html, body {
 /* Start button hit-target — over the illustrated green "start" pill */
 #study-start-btn {
   position: absolute;
-  left: 7%; top: 48%;
+  left: 7%; top: 46%;
   width: 16%; height: 8%;
   z-index: 20;
   background: transparent; border: none; cursor: pointer;
@@ -1008,40 +1020,55 @@ html, body {
 .study-online-list li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 1; }
 .study-online-list li.is-you { color: #354a2e; }
 
-/* Countdown — centred on the laptop screen */
+/* Countdown — inside the left beige study timer panel */
 #study-timer-display {
   display: none;
   position: absolute;
-  left: 57.2%;
-  top: 55.3%;
-  width: 15%;
-  height: 9.5%;
-  transform: rotate(5deg);
-  transform-origin: top left;
+  left: 6.5%;
+  top: 38%;
+  width: 18%;
+  height: auto;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
-  z-index: 20;
+  justify-content: flex-start;
+  z-index: 19;
   background: transparent;
-  pointer-events: none;   /* let clicks pass through to the illustration */
+  pointer-events: none;
 }
-#study-timer-display > * { pointer-events: all; }
 #study-timer-count {
   font-family: 'UglyDave', sans-serif;
-  font-size: clamp(18px, 2.8vw, 46px);
+  font-size: clamp(38px, 2.2vw, 46px);
   color: #3a2a08;
   letter-spacing: 0.05em;
-  width: 100%; text-align: center;
+  width: 100%;
+  text-align: center;
+  line-height: 1;
+  margin-top: 20px;
+  margin-bottom: 16px;
 }
 #study-timer-stop {
-  background: #c05030; color: #fff;
-  border: none; border-radius: 9px;
+  display: none;
+  position: absolute;
+  left: 8.8%;
+  top: 46%;
+  width: 12.5%;
+  height: 6%;
+  z-index: 21;
+  background: #c05030;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
   font-family: 'UglyDave', sans-serif;
-  font-size: clamp(11px, 1vw, 15px);
-  cursor: pointer; padding: 5px 14px;
+  font-size: clamp(9px, 0.85vw, 13px);
+  cursor: pointer;
+  padding: 0;
   box-shadow: 0 2px 0 #8a2010;
   transition: transform 0.15s, box-shadow 0.15s;
+  align-items: center;
+  justify-content: center;
+}
+#study-timer-stop:not([hidden]) {
+  display: flex;
 }
 #study-timer-stop:hover  { transform: translateY(-1px); box-shadow: 0 4px 0 #8a2010; }
 #study-timer-stop:active { transform: translateY(1px);  box-shadow: 0 1px 0 #8a2010; }
@@ -1050,6 +1077,7 @@ html, body {
 #study-music-picker {
   position: absolute;
   left: 5.5%; top: 68%;
+  transform: translate(8px, -15px);
   width: 16.5%;           /* 5.5 + 16.5 = 22% — stays inside card right edge */
   display: flex;
   flex-direction: column;
@@ -1222,7 +1250,7 @@ html, body {
 /* ── Invisible hit-target over the illustrated "← back to map" text ── */
 #leave-page-back {
   position: absolute;
-  top: 1.5%;
+  top: calc(1.5% + 22px);
   left: 0.5%;
   width: 12%;
   height: 6%;
@@ -1380,13 +1408,14 @@ html, body {
 }
 #cc-back {
   position: absolute;
-  top: 1.5%; left: 0.5%;
+  top: calc(1.5% + 22px);
+  left: 0.5%;
   width: 14%; height: 6%;
   background: transparent; border: none; cursor: pointer; z-index: 20;
 }
 #cc-upload-btn {
   position: absolute;
-  top: 56%; left: 7%;
+  top: 50%; left: 7%;
   width: 19%; height: 5.5%;
   background: transparent; border: none;
   cursor: pointer;   /* pointer ONLY here — nowhere else on the screen */
@@ -1394,7 +1423,7 @@ html, body {
 }
 #cc-upload-status {
   position: absolute;
-  top: 62%; left: 5%;
+  top: 56%; left: 5%;
   width: 23%;
   margin: 0;
   font-family: 'UglyDave', sans-serif;
@@ -1698,7 +1727,7 @@ html, body {
   /* ── Notice board ── */
   .noticeboard-inner   { padding: 16px 14px 24px; max-height: 90vh; }
   .noticeboard-pins    { gap: 10px; justify-content: center; }
-  .sticky-note         { width: 140px; min-height: 120px; font-size: 0.76rem; padding: 12px 10px 8px; }
+  .noticeboard-pins .sticky-note { width: 140px; min-height: 120px; font-size: 0.76rem; padding: 12px 10px 8px; }
 
   /* ── Camera compass ── */
   .camera-panel-inner  { padding: 16px 14px 24px; max-height: 90vh; }
@@ -1844,11 +1873,27 @@ html, body {
 #screen-noticeboard {
   background: #3a5c3a;
   display: flex; align-items: center; justify-content: center;
+  z-index: 40;
 }
+
+#screen-noticeboard:not(.active) {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+  z-index: -1 !important;
+}
+
+#screen-noticeboard.active {
+  display: flex;
+  pointer-events: auto;
+  visibility: visible;
+  z-index: 40;
+}
+
 #nb-wrap {
   position: relative;
-  aspect-ratio: 1008 / 720;
-  width: min(100vw, calc(100vh * 1008 / 720));
+  aspect-ratio: 3508 / 2480;
+  width: min(calc(100vw - 56px), calc((100vh - 48px) * 3508 / 2480));
   height: auto;
   overflow: hidden;
   border-radius: 22px;
@@ -1858,71 +1903,185 @@ html, body {
   position: absolute; inset: 0;
   width: 100%; height: 100%;
   object-fit: fill; display: block;
+  z-index: 1;
+  pointer-events: none;
 }
 #nb-back {
   position: absolute;
-  top: 3%; left: 1.5%;
-  width: 15%; height: 4%;
+  top: calc(2.4% + 26px);
+  left: 2%;
+  width: 16%;
+  height: 4.5%;
   background: transparent; border: none; cursor: pointer; z-index: 30;
-  border-radius: 4px;
-  transition: background 0.15s;
+  pointer-events: auto;
 }
-#nb-back:hover { background: rgba(0,0,0,0.10); }
 
-/* Post button disabled — not-allowed cursor when textarea is empty */
-#nb-post-btn { transition: opacity 0.2s; }
-#nb-post-btn.nb-btn-empty { cursor: not-allowed; opacity: 0.55; }
+/* Invisible back-to-map hit targets — no hover/focus overlay */
+#nb-back:hover,
+#nb-back:focus,
+#nb-back:active,
+#leave-page-back:hover,
+#leave-page-back:focus,
+#leave-page-back:active,
+#study-back:hover,
+#study-back:focus,
+#study-back:active,
+#cc-back:hover,
+#cc-back:focus,
+#cc-back:active {
+  background: transparent;
+  outline: none;
+}
 
-/* ── Slots — transparent overlays on the 6 illustrated sticky notes ── */
-.nb-slot {
+/* Post anonymously — hit zone over green pill (incl. flower) */
+#nb-post-zone {
   position: absolute;
+  left: 4%;
+  top: 78%;
+  width: 30%;
+  height: 6.5%;
+  z-index: 100;
+  pointer-events: auto;
+  cursor: pointer;
+}
+#nb-post-btn {
+  display: block;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 1;
+  transition: opacity 0.2s;
+}
+#nb-post-btn.nb-btn-empty {
+  opacity: 0.55;
+}
+#nb-post-btn:hover,
+#nb-post-btn:focus {
+  cursor: pointer;
+  outline: none;
+}
+
+/* ── Sticky notes — anchored to coloured post-its on PSD 3508×2480 ── */
+#nb-wrap .sticky-note {
+  position: absolute;
+  width: 14%;
+  height: 24%;
   background: transparent;
   overflow: hidden;
-  z-index: 10;
-  /* top padding clears the illustrated thumb-tack; sides/bottom stay inside note */
-  padding: 22% 9% 6%;
+  z-index: 15;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none;
+  border-radius: 0;
+  cursor: default;
+  min-height: 0;
+  transform: none;
+  transition: none;
+}
+
+#nb-wrap .sticky-note::before {
+  display: none;
+  content: none;
+}
+
+#nb-wrap .sticky-note:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Row 1: green, yellow, pink */
+#nb-slot-0 { left: 43%; top: 18%; }
+#nb-slot-1 { left: 62%; top: 18%; }
+#nb-slot-2 { left: 81%; top: 18%; }
+/* Row 2: pink, blue, yellow */
+#nb-slot-3 { left: 43%; top: 56%; }
+#nb-slot-4 { left: 62%; top: 56%; }
+#nb-slot-5 { left: 81%; top: 56%; }
+
+/* Note text — centred inside sticky note only */
+#nb-wrap .sticky-note .note-text {
+  position: absolute;
+  left: 40%;
+  top: 0;
+  height: 100%;
+  transform: translateX(-50%);
+  width: 78%;
+  max-width: 78%;
+  padding: 10px;
   box-sizing: border-box;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: flex-start;
-  pointer-events: none;
-}
-/* Row 1 — measured from Notice Board.png */
-#nb-slot-0 { left: 33%; top: 28%; width: 16%; height: 24%; }
-#nb-slot-1 { left: 50%; top: 25%; width: 17%; height: 25%; }
-#nb-slot-2 { left: 68%; top: 26%; width: 16%; height: 24%; }
-/* Row 2 */
-#nb-slot-3 { left: 33%; top: 56%; width: 16%; height: 23%; }
-#nb-slot-4 { left: 50%; top: 54%; width: 17%; height: 24%; }
-#nb-slot-5 { left: 68%; top: 53%; width: 16%; height: 24%; }
-
-/* Text printed on each illustrated note — clearly readable */
-.nb-slot-text {
-  font-family: 'UglyDave', sans-serif;
-  font-size: clamp(11px, 1.2vw, 17px);
-  line-height: 1.45;
+  justify-content: center;
   text-align: center;
+  font-family: 'UglyDaveRegular', 'UglyDave', sans-serif;
+  color: #31451f;
+  font-size: clamp(14px, 1.2vw, 26px);
+  line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
   word-break: break-word;
   overflow: hidden;
-  width: 100%;
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
+  pointer-events: none;
+  margin: 0;
 }
-/* Colours that read clearly against each illustrated note's background */
-#nb-slot-0 .nb-slot-text { color: #1e3a10; }   /* on green  */
-#nb-slot-1 .nb-slot-text { color: #3a2600; }   /* on yellow */
-#nb-slot-2 .nb-slot-text { color: #4a1028; }   /* on pink   */
-#nb-slot-3 .nb-slot-text { color: #4a1028; }   /* on pink   */
-#nb-slot-4 .nb-slot-text { color: #0e2040; }   /* on blue   */
-#nb-slot-5 .nb-slot-text { color: #3a2600; }   /* on yellow */
 
-/* Clip wrapper — exactly inside the illustrated white box border */
+#nb-wrap .sticky-note .note-delete {
+  position: absolute;
+  top: 5%;
+  right: 7%;
+  width: clamp(20px, 1.8vw, 28px);
+  height: clamp(20px, 1.8vw, 28px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  font-family: 'UglyDaveRegular', 'UglyDave', sans-serif;
+  font-size: clamp(16px, 1.4vw, 22px);
+  line-height: 1;
+  color: rgba(49, 69, 31, 0.5);
+  cursor: pointer;
+  pointer-events: auto;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(4deg);
+  opacity: 0.85;
+}
+#nb-wrap .sticky-note .note-delete:hover,
+#nb-wrap .sticky-note .note-delete:focus {
+  color: rgba(49, 69, 31, 0.85);
+  opacity: 1;
+  outline: none;
+}
+
+/* Remove orphaned / legacy text anywhere on the notice board */
+#nb-wrap > .note-text,
+#nb-wrap > .nb-slot-text,
+#screen-noticeboard > .note-text,
+.nb-slot-text {
+  display: none !important;
+  visibility: hidden !important;
+}
+
+/* Clip wrapper — white inner area of beige write box */
 #nb-input-clip {
   position: absolute;
-  left: 6.5%; top: 64.5%;
-  width: 22%; height: 18%;
+  left: 8%;
+  top: 64.5%;
+  width: 14.5%;
+  height: 11.5%;
   overflow: hidden;
   box-sizing: border-box;
   z-index: 20;
@@ -1930,30 +2089,30 @@ html, body {
 #nb-note-input {
   position: absolute;
   inset: 0;
-  width: 100%; height: 100%;
+  width: 100%;
+  height: 100%;
+  font-family: 'UglyDaveRegular', 'UglyDave', sans-serif;
+  color: #354a2e;
   background: transparent;
-  border: none; outline: none; resize: none;
-  font-family: 'UglyDave', sans-serif;
-  font-size: clamp(8px, 0.88vw, 12px);
-  color: #2a1a04;
-  line-height: 1.5;
-  padding: 5px 10px;
+  border: none;
+  outline: none;
+  resize: none;
+  padding-top: 12px;
+  padding-left: 10px;
+  padding-right: 8px;
+  padding-bottom: 6px;
   box-sizing: border-box;
+  font-size: clamp(10px, 1vw, 14px);
+  line-height: 1.4;
   overflow: hidden;
   word-break: break-word;
+  pointer-events: auto;
 }
 #nb-note-input::placeholder {
-  color: rgba(42,26,4,0.30);
-  font-size: clamp(7px, 0.8vw, 10px);
+  color: rgba(53, 74, 46, 0.45);
+  font-size: clamp(9px, 0.95vw, 13px);
 }
 
-/* Post button — transparent hit-target exactly over the green "post anonymously" pill */
-#nb-post-btn {
-  position: absolute;
-  left: 6%; top: 85%;
-  width: 21%; height: 4%;
-  background: transparent; border: none; cursor: pointer; z-index: 25;
-}
 
 .noticeboard-inner {
   background: #2d5a2a;
@@ -2065,7 +2224,7 @@ html, body {
 }
 .cam-pin-btn { width: 100%; margin-top: 4px; }
 
-.sticky-note {
+.noticeboard-pins .sticky-note {
   width: 160px;
   min-height: 140px;
   padding: 14px 12px 10px;
@@ -2081,13 +2240,13 @@ html, body {
   display: flex; flex-direction: column; justify-content: space-between;
   word-break: break-word;
 }
-.sticky-note:hover {
+.noticeboard-pins .sticky-note:hover {
   transform: scale(1.06) rotate(0deg) !important;
   box-shadow: 5px 8px 20px rgba(0,0,0,0.4);
   z-index: 2;
 }
 /* Pin at top */
-.sticky-note::before {
+.noticeboard-pins .sticky-note::before {
   content: '';
   position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
   width: 12px; height: 12px;
@@ -2095,15 +2254,15 @@ html, body {
   border-radius: 50%;
   box-shadow: 0 2px 4px rgba(0,0,0,0.4);
 }
-.sticky-note .sn-text {
+.noticeboard-pins .sticky-note .sn-text {
   flex: 1; font-size: 0.8rem; overflow: hidden;
   display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical;
 }
-.sticky-note .sn-footer {
+.noticeboard-pins .sticky-note .sn-footer {
   margin-top: 8px; font-size: 0.68rem; opacity: 0.6;
   display: flex; justify-content: space-between; align-items: flex-end;
 }
-.sticky-note .sn-mood { font-size: 0.72rem; }
+.noticeboard-pins .sticky-note .sn-mood { font-size: 0.72rem; }
 .sn-yellow  { background: #fef08a; }
 .sn-pink    { background: #fda4af; }
 .sn-blue    { background: #bae6fd; }
